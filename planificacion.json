@@ -1,0 +1,622 @@
+{
+  "version": 1,
+  "teamSize": 2,
+  "rows": [
+    [
+      "S1",
+      "DOC",
+      "A",
+      "P0",
+      6,
+      "Relevar problema, actores y proceso actual",
+      "A1",
+      "Construir diagnóstico propio y separar hechos del caso de supuestos.",
+      "Mapa del proceso actual con cuellos de botella; matriz de actores e intereses; preguntas abiertas sobre equipos, horarios y atención espontánea."
+    ],
+    [
+      "S1",
+      "DOC",
+      "A",
+      "P0",
+      8,
+      "Definir alcance comercial y abono mensual",
+      "B1",
+      "Como cliente, quiero conocer qué cubren los USD 2.000 mensuales para evitar compromisos ambiguos.",
+      "Contrato simulado con incluidos/excluidos; facturación desde primer centro; una semana de capacitación y 30 días de ajustes; consumo de Meta, infraestructura y desarrollo inicial definidos como incluidos o adicionales.",
+      [
+        1
+      ]
+    ],
+    [
+      "S1",
+      "DOC",
+      "A",
+      "P0",
+      8,
+      "Normalizar requerimientos, objetivos y reglas de negocio",
+      "A1,A3,RF-01:12,RNF-01:09",
+      "Construir una base trazable sin inconsistencias de numeración.",
+      "RF/RNF numerados y medibles; prioridades MoSCoW por valor y riesgo; reglas de prioridad/ausencias/duplicados aprobadas; metas identificadas como propuestas, no datos observados.",
+      [
+        1
+      ]
+    ],
+    [
+      "S1",
+      "SPIKE",
+      "B",
+      "P0",
+      8,
+      "Investigar API del proveedor y límites de integración",
+      "RF-10,RF-11",
+      "Investigar durante un máximo de ocho horas cómo consultar turnos sin modificar el módulo externo.",
+      "Contrato de consulta y autenticación documentado; respuestas de error y límites registrados; decisión sobre cancelación/reprogramación; si falta acceso, simulador y limitación explícitos.",
+      [
+        1
+      ]
+    ],
+    [
+      "S1",
+      "SPIKE",
+      "B",
+      "P0",
+      12,
+      "Validar arquitectura para cortes de internet",
+      "RNF-03,A4",
+      "Verificar con una prueba acotada si tótem, médico y pantalla pueden compartir estado por la red local sin internet.",
+      "Prueba entre al menos dos clientes y nodo local; escenario de caída/recuperación; conflictos, permisos offline y turnos no descargados tratados; decisión con evidencia y esfuerzo estimado.",
+      [
+        3
+      ]
+    ],
+    [
+      "S1",
+      "DOC",
+      "A+B",
+      "P0",
+      8,
+      "Fundamentar metodología y registrar riesgos iniciales",
+      "A2,A4,A5",
+      "Definir organización incremental con Scrum y respuestas a incertidumbres.",
+      "Tres metodologías comparadas sin afirmaciones absolutas; seis sprints y roles; al menos ocho riesgos con escala, exposición, responsable por rol, disparador y contingencia; ADR de stack y arquitectura.",
+      [
+        2,
+        4,
+        5
+      ]
+    ],
+    [
+      "S2",
+      "UX",
+      "A",
+      "P0",
+      14,
+      "Diseñar manual de marca y prototipos por perfil",
+      "B4,RF-01,RF-03,RF-04,RNF-05",
+      "Como usuario, quiero interfaces coherentes y adaptadas a mi tarea.",
+      "Tótem, panel, médico y pantalla prototipados; logo y variantes, HEX/RGB, tipografía, grilla, componentes/estados, iconos y tono documentados; origen de assets declarado.",
+      [
+        3
+      ]
+    ],
+    [
+      "S2",
+      "UX",
+      "A",
+      "P0",
+      8,
+      "Validar prototipos con perfiles representativos",
+      "RNF-05,RNF-06,B4",
+      "Comprobar comprensión y accesibilidad antes de programar todas las pantallas.",
+      "Guion de pruebas, participantes y resultados reales documentados; teclado/contraste y legibilidad revisados; si no hay participantes, registrar evaluación interna sin inventar entrevistas; mejoras priorizadas.",
+      [
+        7
+      ]
+    ],
+    [
+      "S2",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Preparar estructura React y NestJS y controles de calidad",
+      "A4,RNF-07",
+      "Crear estructura reproducible para frontend y backend.",
+      "Instalación documentada; .env.example sin secretos; lint y comprobación de tipos en CI; datos ficticios; flujo de rama y PR funcional.",
+      [
+        6
+      ]
+    ],
+    [
+      "S2",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Diseñar modelo conceptual y migraciones PostgreSQL",
+      "A3,RF-02,RF-05,RNF-02",
+      "Representar entidades y proteger integridad de atención.",
+      "Modelo conceptual con relaciones; migraciones reproducibles; centros/profesionales/turnos/llegadas/cola/auditoría/notificaciones; restricciones contra duplicados y seed ficticio.",
+      [
+        3,
+        9
+      ]
+    ],
+    [
+      "S2",
+      "HU",
+      "B",
+      "P0",
+      12,
+      "Implementar autenticación, roles y sesiones",
+      "RNF-04,RF-09",
+      "Como personal autorizado, quiero acceder solo a la información y operaciones de mi rol y centro.",
+      "Dado usuario sin permiso, cuando llama API ajena, entonces se rechaza; cierre/expiración probados; rutas públicas con datos mínimos; pruebas negativas de autorización.",
+      [
+        9,
+        10
+      ]
+    ],
+    [
+      "S2",
+      "DOC",
+      "A",
+      "P1",
+      6,
+      "Documentar arquitectura, casos de uso y decisiones",
+      "A3,A4",
+      "Explicar componentes, datos e integraciones de manera defendible.",
+      "Diagrama de alto nivel con nube/nodo local según spike; mapa de procesos o casos de uso; alternativas justificadas; costos de licencia separados de hosting; versión inicial A4 completa.",
+      [
+        5,
+        6,
+        10
+      ]
+    ],
+    [
+      "S3",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Construir adaptador de consulta de turnos",
+      "RF-10",
+      "Consultar turnos aislando la dependencia del tercero.",
+      "Interfaz con timeout y errores; datos validados; pruebas de contrato; simulador claramente identificado si API no disponible; no guardar credenciales en frontend.",
+      [
+        4,
+        9
+      ]
+    ],
+    [
+      "S3",
+      "HU",
+      "A+B",
+      "P0",
+      14,
+      "Registrar llegada del paciente desde el tótem",
+      "RF-01,RF-02,RF-12",
+      "Como paciente, quiero anunciar mi llegada y recibir un número de orden sin depender de mi celular.",
+      "Dado turno vigente, al identificarse se registra una sola llegada; reiterar no duplica; se entrega número; manejo de turno inexistente y privacidad al finalizar sesión.",
+      [
+        8,
+        10,
+        11,
+        13
+      ]
+    ],
+    [
+      "S3",
+      "HU",
+      "A+B",
+      "P0",
+      14,
+      "Implementar panel de admisión y consulta de cola",
+      "RF-02,RF-12",
+      "Como secretaria, quiero ver quién llegó y asistir al paciente que no usa el tótem.",
+      "Cola filtrada por centro/profesional; admisión asistida; estados vacío/carga/error/datos; otra sesión ve el cambio; acceso restringido por centro.",
+      [
+        11,
+        14
+      ]
+    ],
+    [
+      "S3",
+      "HU",
+      "B",
+      "P0",
+      10,
+      "Gestionar demanda espontánea y prioridades",
+      "RF-05",
+      "Como secretaria, quiero incorporar pacientes sin turno según reglas acordadas.",
+      "Prioridad con motivo y auditoría; orden determinista; no modificar silenciosamente turnos del proveedor; pruebas de empate y concurrencia; criterios aprobados con cliente simulado.",
+      [
+        3,
+        15
+      ]
+    ],
+    [
+      "S3",
+      "HU",
+      "A",
+      "P1",
+      6,
+      "Definir flujo autorizado de reprogramación y cancelación",
+      "RF-11",
+      "Como secretaria, quiero resolver cambios de turno sin prometer operaciones que la API no admite.",
+      "Interfaz deriva al circuito permitido o registra solicitud local pendiente; diferencia entre cambio solicitado y confirmado; no informa éxito ficticio al paciente.",
+      [
+        4,
+        13,
+        15
+      ]
+    ],
+    [
+      "S3",
+      "TEST",
+      "A+B",
+      "P0",
+      8,
+      "Probar admisión y concurrencia de colas",
+      "RF-01,RF-02,RF-05,RNF-02",
+      "Verificar consistencia entre operaciones simultáneas.",
+      "Casos de llegada duplicada, prioridad y dos operadores; errores reproducibles registrados como bugs; evidencias y resultados, sin marcar pruebas pendientes como aprobadas.",
+      [
+        14,
+        15,
+        16
+      ]
+    ],
+    [
+      "S4",
+      "HU",
+      "A+B",
+      "P0",
+      12,
+      "Llamar al siguiente paciente con una acción",
+      "RF-04,RNF-02",
+      "Como médico, quiero llamar al siguiente presente sin cargar datos adicionales.",
+      "Un clic llama solo un paciente presente; dos solicitudes simultáneas no duplican llamado; reintento idempotente; registro persistente antes de notificar.",
+      [
+        11,
+        16,
+        18
+      ]
+    ],
+    [
+      "S4",
+      "HU",
+      "A",
+      "P0",
+      10,
+      "Implementar pantalla pública de sala de espera",
+      "RF-03,RNF-05",
+      "Como paciente, quiero reconocer mi número y consultorio a distancia.",
+      "Solo número y consultorio, sin datos sensibles; llamado visual y apoyo sonoro; prueba de legibilidad a ocho metros; estados sin datos y desconectado visibles.",
+      [
+        7,
+        19
+      ]
+    ],
+    [
+      "S4",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Sincronizar vistas con Socket.IO y reconexión",
+      "RF-02,RF-03,RF-04,RNF-02",
+      "Mantener las pantallas consistentes y recuperar mensajes perdidos.",
+      "Canales autorizados por centro; tras reconexión se consulta estado actual; backend persiste fuente de verdad; reconexión probada sin obligar a relogin si la sesión sigue válida.",
+      [
+        15,
+        19,
+        20
+      ]
+    ],
+    [
+      "S4",
+      "HU",
+      "A+B",
+      "P1",
+      8,
+      "Mostrar demoras y estimación de espera",
+      "RF-03,RF-06",
+      "Como paciente, quiero conocer la demora sin consultar continuamente al mostrador.",
+      "Algoritmo y umbral de aviso aprobados; estimación identificada como aproximada; falta de datos no inventa minutos; actualización visible en secretaría y sala.",
+      [
+        19,
+        21
+      ]
+    ],
+    [
+      "S4",
+      "TASK",
+      "B",
+      "P0",
+      20,
+      "Implementar continuidad local y reconciliación",
+      "RNF-03",
+      "Mantener la cola del centro durante cortes según arquitectura validada.",
+      "Corte de internet mantiene circuito entre equipos locales; evento único y orden definidos; restauración sin duplicar; autenticación offline acotada; caso de turno no descargado resuelto; límites eléctricos/red local documentados.",
+      [
+        5,
+        19,
+        21
+      ]
+    ],
+    [
+      "S4",
+      "TEST",
+      "A+B",
+      "P0",
+      10,
+      "Probar circuito completo y corte de conectividad",
+      "RF-01,RF-02,RF-03,RF-04,RNF-03",
+      "Verificar paciente anunciado, cola, llamado y pantalla con y sin internet.",
+      "Evidencia del flujo E2E; pérdida y recuperación de red; no confundir PWA cacheada con cola compartida; revisar inicio y cierre de atención para futuros indicadores.",
+      [
+        14,
+        19,
+        20,
+        21,
+        23
+      ]
+    ],
+    [
+      "S5",
+      "TASK",
+      "B",
+      "P0",
+      12,
+      "Integrar plantillas y credenciales de WhatsApp Meta",
+      "RF-07,RNF-04",
+      "Enviar recordatorios mediante integración oficial directa sin Twilio ni n8n.",
+      "Plantilla de utilidad y acceso habilitados o simulador declarado; destinatarios ficticios/de prueba; secretos en servidor; payload mínimo; errores y estado de aprobación documentados.",
+      [
+        11,
+        13
+      ]
+    ],
+    [
+      "S5",
+      "HU",
+      "B",
+      "P0",
+      14,
+      "Programar recordatorios y registrar entrega",
+      "RF-07",
+      "Como afiliado, quiero recibir un recordatorio de mi turno vigente.",
+      "Proceso servidor independiente del navegador; verificar vigencia antes de enviar; evitar duplicados entre instancias; reintentos acotados; webhooks verificados; envío y entrega diferenciados; baja de notificaciones respetada.",
+      [
+        25,
+        13
+      ]
+    ],
+    [
+      "S5",
+      "HU",
+      "A+B",
+      "P1",
+      14,
+      "Construir indicadores con definiciones verificables",
+      "RF-08",
+      "Como director, quiero medir espera, ausentismo y ocupación por centro y especialidad.",
+      "Fórmulas y denominadores definidos; distinguir ausentes/cancelados/pendientes; inicio-fin para ocupación; filtros por fecha y centro; datos conocidos producen resultados comprobables.",
+      [
+        10,
+        19,
+        24
+      ]
+    ],
+    [
+      "S5",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Completar auditoría y controles de datos",
+      "RF-09,RNF-04,RNF-09",
+      "Registrar acciones relevantes y limitar el acceso a información sensible.",
+      "Actor/fecha/centro/acción; operador no puede alterar auditoría; no registrar secretos; retención y consentimiento según decisiones de Auditoría/Legales; pruebas de acceso.",
+      [
+        11,
+        15,
+        19,
+        26
+      ]
+    ],
+    [
+      "S5",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Configurar despliegue, respaldos y restauración",
+      "RNF-07,A4",
+      "Publicar un entorno de prueba recuperable.",
+      "Render configurado; migraciones y salud; respaldo y restauración ensayados; separar plan propuesto de recursos realmente contratados; no comprar ni crear cargos reales sin autorización.",
+      [
+        9,
+        10,
+        21,
+        28
+      ]
+    ],
+    [
+      "S5",
+      "DOC",
+      "A",
+      "P1",
+      6,
+      "Actualizar informe y preparar estrategia comercial",
+      "A1:A5,B1,B6",
+      "Mantener propuesta alineada con decisiones y evidencia.",
+      "Fundamentación de USD 2.000 mensuales como precio comercial; incluidos y consumos claros; tres objeciones; propuesta de valor y siguiente paso; matriz riesgos actualizada; fuentes sin precios inventados.",
+      [
+        2,
+        6,
+        12,
+        26,
+        29
+      ]
+    ],
+    [
+      "S6",
+      "TEST",
+      "A+B",
+      "P0",
+      16,
+      "Ejecutar pruebas de aceptación, carga y accesibilidad",
+      "RNF-01:09,B3,B4",
+      "Verificar criterios comprometidos antes de entregar.",
+      "Carga basada en concurrencia/pico justificados; autorización negativa; desconexiones; teclado/contraste; sin defectos críticos; resultados y limitaciones conservados.",
+      [
+        24,
+        26,
+        27,
+        28,
+        29
+      ]
+    ],
+    [
+      "S6",
+      "DOC",
+      "A",
+      "P0",
+      10,
+      "Redactar manual de usuario y material de capacitación",
+      "B5",
+      "Como usuario final, quiero instrucciones por perfil con capturas reales.",
+      "Flujos paciente/secretaria/médico/director y soporte; requisitos de acceso; problemas frecuentes y glosario; capturas del sistema real; guion para semana de capacitación.",
+      [
+        20,
+        26,
+        27,
+        31
+      ]
+    ],
+    [
+      "S6",
+      "DOC",
+      "A+B",
+      "P0",
+      8,
+      "Cerrar informe, contrato y declaración de IA",
+      "A1:A5,B1,IA",
+      "Preparar documentos completos conforme a la consigna.",
+      "Informe de 8–15 páginas sin anexos, carátula/índice/páginas/fuentes; contrato firmado por grupo con espacio cliente; declaración IA; trazabilidad; comparación con checklist oficial.",
+      [
+        30,
+        31,
+        32
+      ]
+    ],
+    [
+      "S6",
+      "TASK",
+      "B",
+      "P0",
+      6,
+      "Preparar demo pública y respaldo audiovisual",
+      "B3",
+      "Demostrar un circuito completo con datos ficticios.",
+      "URL accesible, README de ejecución, frontend/backend/persistencia/auth; video de 2–3 minutos; no depender de API real no habilitada sin avisar; demo probada en equipo de defensa.",
+      [
+        29,
+        31
+      ]
+    ],
+    [
+      "S6",
+      "DOC",
+      "A",
+      "P0",
+      8,
+      "Diseñar presentación propia y guion equilibrado",
+      "C,B4,B6",
+      "Comunicar la propuesta como reunión comercial simulada.",
+      "Diseño propio y marca; 25 minutos repartidos entre ambos; preguntas 15 minutos; diagnóstico/solución/alcance/demo/riesgos/cierre; evitar jerga sin explicar.",
+      [
+        30,
+        33,
+        34
+      ]
+    ],
+    [
+      "S6",
+      "TEST",
+      "A+B",
+      "P0",
+      8,
+      "Ensayar defensa y verificar entrega 48 horas antes",
+      "C,B2,B3",
+      "Asegurar que ambos integrantes defienden todo el proyecto.",
+      "Ensayo con cinco preguntas del caso y cambio de condiciones; ambos explican código y modificación; enlaces/documentos accesibles; checklist de entrega y evidencia de trabajo real.",
+      [
+        33,
+        34,
+        35
+      ]
+    ],
+    [
+      "P1",
+      "TASK",
+      "A+B",
+      "P0",
+      12,
+      "Preparar centro piloto y capacitar durante una semana",
+      "B1,B5,RNF-07",
+      "Planificar capacitación por rol antes de la prueba operativa.",
+      "Cronograma semanal, ejercicios y evaluación por rol; dispositivos y contingencia verificados; autorización de piloto simulada; identificar actividad académica vs implementación real.",
+      [
+        31,
+        32,
+        36
+      ]
+    ],
+    [
+      "P1",
+      "TASK",
+      "B",
+      "P0",
+      10,
+      "Desplegar piloto y habilitar período de prueba",
+      "B1,RNF-03,RNF-07",
+      "Iniciar operación controlada del primer centro.",
+      "Criterios go/no-go; respaldo y rollback; registro de inicio para abono USD 2.000 y prueba30 días; no desplegar datos reales ni contratar servicios en este TP.",
+      [
+        37,
+        29
+      ]
+    ],
+    [
+      "P1",
+      "TASK",
+      "A+B",
+      "P0",
+      16,
+      "Gestionar 30 días de prueba y ajustes incluidos",
+      "B1,B5",
+      "Dar seguimiento a incidencias sin ampliar alcance informalmente.",
+      "Registro de incidencias y severidades; defectos/ajustes incluidos sin cargo extra; nuevas funciones por cambio de alcance; criterios de aceptación del piloto y reporte de cierre.",
+      [
+        38
+      ]
+    ],
+    [
+      "P1",
+      "TASK",
+      "A+B",
+      "P1",
+      12,
+      "Planificar extensión progresiva a cinco centros restantes",
+      "B1,RNF-07",
+      "Extender solo tras aceptar el piloto.",
+      "Orden por infraestructura y riesgo; checklist por centro; compatibilidad/reversión; responsable y validación; fechas posteriores a la aceptación, sin prometer simultaneidad.",
+      [
+        39
+      ]
+    ]
+  ]
+}

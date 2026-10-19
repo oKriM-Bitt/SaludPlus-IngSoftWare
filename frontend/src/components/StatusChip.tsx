@@ -1,21 +1,22 @@
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 export type EstadoTurno = 'en-espera' | 'llamado' | 'cancelado-tolerancia' | 'ausente' | 'contraturno';
 
-const etiquetas: Record<EstadoTurno, string> = {
-  'en-espera': 'En espera',
-  llamado: 'Llamado',
-  'cancelado-tolerancia': 'Cancelado por tolerancia',
-  ausente: 'Ausente',
-  contraturno: 'Contraturno',
+const config: Record<EstadoTurno, { etiqueta: string; icono: IconName }> = {
+  'en-espera': { etiqueta: 'En espera', icono: 'clock' },
+  llamado: { etiqueta: 'Llamado', icono: 'megaphone' },
+  'cancelado-tolerancia': { etiqueta: 'Cancelado por tolerancia', icono: 'x-circle' },
+  ausente: { etiqueta: 'Ausente', icono: 'user-x' },
+  contraturno: { etiqueta: 'Contraturno', icono: 'swap' },
 };
 
+/** Estados siempre con ícono y texto, nunca solo color. */
 export function StatusChip({ estado }: { estado: EstadoTurno }) {
+  const { etiqueta, icono } = config[estado];
   return (
     <span className={`chip chip--${estado}`}>
-      {estado === 'en-espera' && <Icon name="clock" size={20} />}
-      {estado === 'llamado' && <Icon name="megaphone" size={20} />}
-      {etiquetas[estado]}
+      <Icon name={icono} size={20} />
+      {etiqueta}
     </span>
   );
 }

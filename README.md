@@ -4,7 +4,7 @@ Proyecto académico de Ingeniería de Software: sistema de turnos, admisión y s
 Se trabaja como un equipo proveedor dentro de una simulación comercial. No hay contratos, compras ni despliegues productivos reales comprometidos por este repositorio.
 
 ## Estado
-Etapa actual: desarrollo del frontend con datos simulados. Ya están el tótem de autogestión (`/totem`) y la vista del profesional (`/profesional`). Faltan el panel de secretaría, la pantalla de sala y el backend. Las tareas abiertas representan trabajo pendiente, no avances ya realizados.
+Etapa actual: desarrollo del frontend con datos simulados. Ya están el tótem de autogestión (`/totem`), la vista del profesional (`/profesional`), el panel de secretaría (`/secretaria`) y la lámina de componentes (`/componentes`). Faltan la pantalla de sala y el backend. Las tareas abiertas representan trabajo pendiente, no avances ya realizados.
 
 ## Código
 - [`frontend/`](frontend/README.md): React + TypeScript + Vite. Para correrlo: `cd frontend`, `npm install`, `npm run dev`.

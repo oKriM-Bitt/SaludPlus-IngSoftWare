@@ -9,6 +9,7 @@ import {
   hayConexion,
   llamarSiguiente,
   obtenerCola,
+  profesionalPorConsultorio,
   SinConexionError,
   type ColaConsultorio,
 } from '../../services/turnos';
@@ -18,12 +19,6 @@ import './profesional.css';
 const CENTRO = 'Centro Villa Norte';
 const ACTUALIZAR_CADA_MS = 5_000;
 
-/** Datos ficticios del consultorio. Con backend, vendrán de la sesión del profesional. */
-const CONSULTORIOS: Record<string, { profesional: string; especialidad: string }> = {
-  '4': { profesional: 'Dra. Lucía Ferrer', especialidad: 'Clínica médica' },
-  '6': { profesional: 'Dra. Paula Ríos', especialidad: 'Pediatría' },
-};
-
 type Estado =
   | { tipo: 'cargando' } // P04
   | { tipo: 'error' } // P05
@@ -32,7 +27,7 @@ type Estado =
 
 export function ProfesionalPage() {
   const consultorio = new URLSearchParams(window.location.search).get('consultorio') ?? '4';
-  const datos = CONSULTORIOS[consultorio] ?? CONSULTORIOS['4'];
+  const datos = profesionalPorConsultorio(consultorio);
 
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' });
   const [accion, setAccion] = useState<'llamando' | 'finalizando' | null>(null);
@@ -116,7 +111,7 @@ export function ProfesionalPage() {
           <div>
             <h1>Consultorio {consultorio}</h1>
             <p>
-              {datos.profesional} · {datos.especialidad}
+              {datos.nombre} · {datos.especialidad}
             </p>
           </div>
           <div className="prof__contador" aria-live="polite">

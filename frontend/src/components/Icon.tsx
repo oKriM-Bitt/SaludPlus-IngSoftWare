@@ -13,7 +13,15 @@ export type IconName =
   | 'wifi'
   | 'megaphone'
   | 'check'
-  | 'users';
+  | 'users'
+  | 'building'
+  | 'user'
+  | 'user-check'
+  | 'user-x'
+  | 'swap'
+  | 'info'
+  | 'calendar-check'
+  | 'chevron-down';
 
 const paths: Record<IconName, JSX.Element> = {
   hand: (
@@ -71,6 +79,44 @@ const paths: Record<IconName, JSX.Element> = {
       <path d="M2 21a7 7 0 0 1 14 0M16 3.13a4 4 0 0 1 0 7.75M22 21a7 7 0 0 0-4-6.32" />
     </>
   ),
+  building: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="1" />
+      <path d="M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+  'user-check': (
+    <>
+      <circle cx="10" cy="8" r="4" />
+      <path d="M3 21a7 7 0 0 1 11-5.7M16 19l2 2 4-4" />
+    </>
+  ),
+  'user-x': (
+    <>
+      <circle cx="10" cy="8" r="4" />
+      <path d="M3 21a7 7 0 0 1 11-5.7M17 17l4 4M21 17l-4 4" />
+    </>
+  ),
+  swap: <path d="M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7" />,
+  info: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </>
+  ),
+  'calendar-check': (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4" />
+    </>
+  ),
+  'chevron-down': <path d="M6 9l6 6 6-6" />,
   'help-circle': (
     <>
       <circle cx="12" cy="12" r="10" />

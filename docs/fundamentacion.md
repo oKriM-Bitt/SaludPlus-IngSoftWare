@@ -19,7 +19,7 @@ Figma y Stitch se utilizarán para explorar y validar interfaces. Los resultados
 ## Tiempo de desarrollo
 Se estima un plazo de tres meses, planificado como 12 semanas de desarrollo y seis sprints de dos semanas. La estimación corresponde a una primera versión con alcance acordado, no a la resolución de todos los pedidos posibles del cliente.
 
-El primer mes se destinará al análisis, alcance, diseño de interfaces, arquitectura y base técnica. El segundo mes se enfocará en el circuito principal: validación del turno, registro de llegada, cola de espera, llamado y visualización en sala. El tercer mes incorporará recordatorios, indicadores, pruebas integrales, documentación y preparación del despliegue.
+El primer mes se destinará al análisis, alcance, diseño de interfaces, arquitectura y base técnica. El segundo mes se enfocará en el circuito principal: validación del turno, registro de llegada, cola de espera, llamado y visualización en sala. El tercer mes incorporará la regla de tolerancia y contraturnos, los indicadores, la auditoría, pruebas integrales, documentación y preparación del despliegue.
 
 Cada sprint concluirá con una revisión de los entregables y una retrospectiva. Las validaciones con el Director Médico se realizarán por videollamada y las pruebas de uso incluirán representantes de secretaría, médicos y pacientes.
 
@@ -42,6 +42,4 @@ Integración obligatoria: se conservará el módulo de turnos del proveedor. La 
 Datos: el sistema se limitará a la información necesaria para gestionar la atención. Se diseñarán permisos por rol y centro, auditoría de accesos, gestión de sesiones y reglas de retención acordadas con Auditoría/Legales. La demostración utilizará datos ficticios.
 
 Continuidad del servicio: los despliegues serán progresivos y tendrán criterios de avance, compatibilidad y reversión. No se trasladará el piloto a los seis centros si persisten fallas que comprometan la atención.
-
-Notificaciones: NestJS programará recordatorios y se integrará directamente con WhatsApp Business Platform de Meta. Se requerirán acceso autorizado, plantillas aprobadas, destinatarios habilitados y registro de resultados. El costo por envío y las condiciones se cotizarán por separado o se incluirán con un límite explícito dentro del abono.
 

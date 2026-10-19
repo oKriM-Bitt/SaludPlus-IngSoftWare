@@ -10,7 +10,7 @@ No cerrar issues por haber escrito una intención; deben cumplirse sus criterios
 ## Definición de terminado
 - Criterios de aceptación cumplidos y evidencia enlazada.
 - Revisión por otro integrante cuando sea posible.
-- Pruebas pertinentes al riesgo y al comportamiento cambiado.
+- Pruebas pertinentes al comportamiento cambiado.
 - Sin credenciales ni datos personales reales.
 - Documentación y trazabilidad actualizadas.
 - Para UI: estados vacío, carga, datos y error; teclado y contraste revisados.

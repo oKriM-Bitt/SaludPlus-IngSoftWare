@@ -22,7 +22,7 @@
       "Definir alcance comercial y abono mensual",
       "B1",
       "Como cliente, quiero conocer qué cubren los USD 2.000 mensuales para evitar compromisos ambiguos.",
-      "Contrato simulado con incluidos/excluidos; facturación desde primer centro; una semana de capacitación y 30 días de ajustes; consumo de Meta, infraestructura y desarrollo inicial definidos como incluidos o adicionales.",
+      "Contrato simulado con incluidos/excluidos; facturación desde primer centro; una semana de capacitación y 30 días de ajustes; infraestructura, alojamiento y desarrollo inicial definidos como incluidos o adicionales.",
       [
         1
       ]
@@ -34,9 +34,9 @@
       "P0",
       8,
       "Normalizar requerimientos, objetivos y reglas de negocio",
-      "A1,A3,RF-01:12,RNF-01:09",
+      "A1,A3,RF-01:12,RNF-01:05,RNF-08:11",
       "Construir una base trazable sin inconsistencias de numeración.",
-      "RF/RNF numerados y medibles; prioridades MoSCoW por valor y riesgo; reglas de prioridad/ausencias/duplicados aprobadas; metas identificadas como propuestas, no datos observados.",
+      "RF/RNF numerados y medibles; prioridades MoSCoW por valor e impacto; reglas de prioridad/ausencias/duplicados aprobadas; metas identificadas como propuestas, no datos observados.",
       [
         1
       ]
@@ -48,9 +48,9 @@
       "P0",
       8,
       "Investigar API del proveedor y límites de integración",
-      "RF-10,RF-11",
+      "RF-10",
       "Investigar durante un máximo de ocho horas cómo consultar turnos sin modificar el módulo externo.",
-      "Contrato de consulta y autenticación documentado; respuestas de error y límites registrados; decisión sobre cancelación/reprogramación; si falta acceso, simulador y limitación explícitos.",
+      "Contrato de consulta y autenticación documentado; respuestas de error y límites registrados; confirmación de que reservas, cancelaciones y reprogramaciones quedan en el sistema del proveedor; si falta acceso, simulador y limitación explícitos.",
       [
         1
       ]
@@ -75,10 +75,10 @@
       "A+B",
       "P0",
       8,
-      "Fundamentar metodología y registrar riesgos iniciales",
-      "A2,A4,A5",
+      "Fundamentar metodología y decisiones técnicas",
+      "A2,A4",
       "Definir organización incremental con Scrum y respuestas a incertidumbres.",
-      "Tres metodologías comparadas sin afirmaciones absolutas; seis sprints y roles; al menos ocho riesgos con escala, exposición, responsable por rol, disparador y contingencia; ADR de stack y arquitectura.",
+      "Tres metodologías comparadas sin afirmaciones absolutas; seis sprints y roles; ADR de stack y arquitectura.",
       [
         2,
         4,
@@ -106,7 +106,7 @@
       "P0",
       8,
       "Validar prototipos con perfiles representativos",
-      "RNF-05,RNF-06,B4",
+      "RNF-05,RNF-08,B4",
       "Comprobar comprensión y accesibilidad antes de programar todas las pantallas.",
       "Guion de pruebas, participantes y resultados reales documentados; teclado/contraste y legibilidad revisados; si no hay participantes, registrar evaluación interna sin inventar entrevistas; mejoras priorizadas.",
       [
@@ -120,7 +120,7 @@
       "P0",
       10,
       "Preparar estructura React y NestJS y controles de calidad",
-      "A4,RNF-07",
+      "A4,RNF-09",
       "Crear estructura reproducible para frontend y backend.",
       "Instalación documentada; .env.example sin secretos; lint y comprobación de tipos en CI; datos ficticios; flujo de rama y PR funcional.",
       [
@@ -238,16 +238,16 @@
     [
       "S3",
       "HU",
-      "A",
-      "P1",
-      6,
-      "Definir flujo autorizado de reprogramación y cancelación",
-      "RF-11",
-      "Como secretaria, quiero resolver cambios de turno sin prometer operaciones que la API no admite.",
-      "Interfaz deriva al circuito permitido o registra solicitud local pendiente; diferencia entre cambio solicitado y confirmado; no informa éxito ficticio al paciente.",
+      "A+B",
+      "P0",
+      10,
+      "Aplicar tolerancia de 15 minutos y registrar contraturno",
+      "RF-07,RF-11",
+      "Como secretaria, quiero que el sistema cancele los turnos que superan la tolerancia y me permita asignar un contraturno.",
+      "Llegada posterior a 15 minutos rechazada en el tótem con mensaje y derivación a secretaría; turno sin llegada marcado como ausente; contraturno registrado en la cola del día con profesional y motivo; acción registrada en auditoría.",
       [
-        4,
         13,
+        14,
         15
       ]
     ],
@@ -365,44 +365,14 @@
     ],
     [
       "S5",
-      "TASK",
-      "B",
-      "P0",
-      12,
-      "Integrar plantillas y credenciales de WhatsApp Meta",
-      "RF-07,RNF-04",
-      "Enviar recordatorios mediante integración oficial directa sin Twilio ni n8n.",
-      "Plantilla de utilidad y acceso habilitados o simulador declarado; destinatarios ficticios/de prueba; secretos en servidor; payload mínimo; errores y estado de aprobación documentados.",
-      [
-        11,
-        13
-      ]
-    ],
-    [
-      "S5",
-      "HU",
-      "B",
-      "P0",
-      14,
-      "Programar recordatorios y registrar entrega",
-      "RF-07",
-      "Como afiliado, quiero recibir un recordatorio de mi turno vigente.",
-      "Proceso servidor independiente del navegador; verificar vigencia antes de enviar; evitar duplicados entre instancias; reintentos acotados; webhooks verificados; envío y entrega diferenciados; baja de notificaciones respetada.",
-      [
-        25,
-        13
-      ]
-    ],
-    [
-      "S5",
       "HU",
       "A+B",
       "P1",
       14,
       "Construir indicadores con definiciones verificables",
-      "RF-08",
+      "RF-08,RF-07",
       "Como director, quiero medir espera, ausentismo y ocupación por centro y especialidad.",
-      "Fórmulas y denominadores definidos; distinguir ausentes/cancelados/pendientes; inicio-fin para ocupación; filtros por fecha y centro; datos conocidos producen resultados comprobables.",
+      "Fórmulas y denominadores definidos; distinguir ausentes, cancelados por tolerancia, contraturnos y pendientes; inicio-fin para ocupación; filtros por fecha y centro; datos conocidos producen resultados comprobables.",
       [
         10,
         19,
@@ -416,14 +386,13 @@
       "P0",
       10,
       "Completar auditoría y controles de datos",
-      "RF-09,RNF-04,RNF-09",
+      "RF-09,RNF-04,RNF-11",
       "Registrar acciones relevantes y limitar el acceso a información sensible.",
       "Actor/fecha/centro/acción; operador no puede alterar auditoría; no registrar secretos; retención y consentimiento según decisiones de Auditoría/Legales; pruebas de acceso.",
       [
         11,
         15,
-        19,
-        26
+        19
       ]
     ],
     [
@@ -433,14 +402,14 @@
       "P0",
       10,
       "Configurar despliegue, respaldos y restauración",
-      "RNF-07,A4",
+      "RNF-09,A4",
       "Publicar un entorno de prueba recuperable.",
       "Render configurado; migraciones y salud; respaldo y restauración ensayados; separar plan propuesto de recursos realmente contratados; no comprar ni crear cargos reales sin autorización.",
       [
         9,
         10,
         21,
-        28
+        26
       ]
     ],
     [
@@ -450,15 +419,14 @@
       "P1",
       6,
       "Actualizar informe y preparar estrategia comercial",
-      "A1:A5,B1,B6",
+      "A1:A4,B1,B6",
       "Mantener propuesta alineada con decisiones y evidencia.",
-      "Fundamentación de USD 2.000 mensuales como precio comercial; incluidos y consumos claros; tres objeciones; propuesta de valor y siguiente paso; matriz riesgos actualizada; fuentes sin precios inventados.",
+      "Fundamentación de USD 2.000 mensuales como precio comercial; incluidos y consumos claros; tres objeciones; propuesta de valor y siguiente paso; fuentes sin precios inventados.",
       [
         2,
         6,
         12,
-        26,
-        29
+        27
       ]
     ],
     [
@@ -473,10 +441,9 @@
       "Carga basada en concurrencia/pico justificados; autorización negativa; desconexiones; teclado/contraste; sin defectos críticos; resultados y limitaciones conservados.",
       [
         24,
+        25,
         26,
-        27,
-        28,
-        29
+        27
       ]
     ],
     [
@@ -491,9 +458,8 @@
       "Flujos paciente/secretaria/médico/director y soporte; requisitos de acceso; problemas frecuentes y glosario; capturas del sistema real; guion para semana de capacitación.",
       [
         20,
-        26,
-        27,
-        31
+        25,
+        29
       ]
     ],
     [
@@ -507,9 +473,9 @@
       "Preparar documentos completos conforme a la consigna.",
       "Informe de 8–15 páginas sin anexos, carátula/índice/páginas/fuentes; contrato firmado por grupo con espacio cliente; declaración IA; trazabilidad; comparación con checklist oficial.",
       [
-        30,
-        31,
-        32
+        28,
+        29,
+        30
       ]
     ],
     [
@@ -523,8 +489,8 @@
       "Demostrar un circuito completo con datos ficticios.",
       "URL accesible, README de ejecución, frontend/backend/persistencia/auth; video de 2–3 minutos; no depender de API real no habilitada sin avisar; demo probada en equipo de defensa.",
       [
-        29,
-        31
+        27,
+        29
       ]
     ],
     [
@@ -536,11 +502,11 @@
       "Diseñar presentación propia y guion equilibrado",
       "C,B4,B6",
       "Comunicar la propuesta como reunión comercial simulada.",
-      "Diseño propio y marca; 25 minutos repartidos entre ambos; preguntas 15 minutos; diagnóstico/solución/alcance/demo/riesgos/cierre; evitar jerga sin explicar.",
+      "Diseño propio y marca; 25 minutos repartidos entre ambos; preguntas 15 minutos; diagnóstico/solución/alcance/demo/cierre; evitar jerga sin explicar.",
       [
-        30,
-        33,
-        34
+        28,
+        31,
+        32
       ]
     ],
     [
@@ -554,9 +520,9 @@
       "Asegurar que ambos integrantes defienden todo el proyecto.",
       "Ensayo con cinco preguntas del caso y cambio de condiciones; ambos explican código y modificación; enlaces/documentos accesibles; checklist de entrega y evidencia de trabajo real.",
       [
-        33,
-        34,
-        35
+        31,
+        32,
+        33
       ]
     ],
     [
@@ -566,13 +532,13 @@
       "P0",
       12,
       "Preparar centro piloto y capacitar durante una semana",
-      "B1,B5,RNF-07",
+      "B1,B5,RNF-09",
       "Planificar capacitación por rol antes de la prueba operativa.",
       "Cronograma semanal, ejercicios y evaluación por rol; dispositivos y contingencia verificados; autorización de piloto simulada; identificar actividad académica vs implementación real.",
       [
-        31,
-        32,
-        36
+        29,
+        30,
+        34
       ]
     ],
     [
@@ -582,12 +548,12 @@
       "P0",
       10,
       "Desplegar piloto y habilitar período de prueba",
-      "B1,RNF-03,RNF-07",
+      "B1,RNF-03,RNF-09",
       "Iniciar operación controlada del primer centro.",
       "Criterios go/no-go; respaldo y rollback; registro de inicio para abono USD 2.000 y prueba30 días; no desplegar datos reales ni contratar servicios en este TP.",
       [
-        37,
-        29
+        35,
+        27
       ]
     ],
     [
@@ -601,7 +567,7 @@
       "Dar seguimiento a incidencias sin ampliar alcance informalmente.",
       "Registro de incidencias y severidades; defectos/ajustes incluidos sin cargo extra; nuevas funciones por cambio de alcance; criterios de aceptación del piloto y reporte de cierre.",
       [
-        38
+        36
       ]
     ],
     [
@@ -611,11 +577,11 @@
       "P1",
       12,
       "Planificar extensión progresiva a cinco centros restantes",
-      "B1,RNF-07",
+      "B1,RNF-09",
       "Extender solo tras aceptar el piloto.",
-      "Orden por infraestructura y riesgo; checklist por centro; compatibilidad/reversión; responsable y validación; fechas posteriores a la aceptación, sin prometer simultaneidad.",
+      "Orden por infraestructura y conectividad; checklist por centro; compatibilidad/reversión; responsable y validación; fechas posteriores a la aceptación, sin prometer simultaneidad.",
       [
-        39
+        37
       ]
     ]
   ]

@@ -2,11 +2,11 @@
 ## Calendario relativo
 | Hito | Semanas | Resultado esperado |
 |---|---|---|
-| S1 Análisis y decisiones | 1–2 | Alcance, relevamiento, metodología, riesgos y pruebas de viabilidad |
+| S1 Análisis y decisiones | 1–2 | Alcance, relevamiento, metodología y pruebas de viabilidad |
 | S2 Diseño y base técnica | 3–4 | Prototipos, modelo de datos, autenticación y estructura inicial |
 | S3 Admisión y colas | 5–6 | Autoanuncio y operación de secretaría integrados |
 | S4 Atención y continuidad | 7–8 | Llamado, pantalla y continuidad local probada |
-| S5 Recordatorios e indicadores | 9–10 | Notificaciones, métricas y recuperación |
+| S5 Indicadores, auditoría y despliegue | 9–10 | Métricas, auditoría, despliegue y recuperación |
 | S6 Validación y entrega | 11–12 | Pruebas, documentación y demostración verificadas |
 | P1 Capacitación | 13 | Una semana por perfiles y preparación operativa |
 | P2 Prueba del piloto | Desde semana 14, durante 30 días | Incidencias corregidas y aceptación del piloto |

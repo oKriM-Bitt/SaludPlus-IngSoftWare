@@ -25,18 +25,18 @@ Como cliente, quiero conocer qué cubren los USD 2.000 mensuales para evitar com
 - [ ] Contrato simulado con incluidos/excluidos
 - [ ] facturación desde primer centro
 - [ ] una semana de capacitación y 30 días de ajustes
-- [ ] consumo de Meta, infraestructura y desarrollo inicial definidos como incluidos o adicionales.
+- [ ] infraestructura, alojamiento y desarrollo inicial definidos como incluidos o adicionales.
 
 ## SP-3 · Normalizar requerimientos, objetivos y reglas de negocio
 
 Construir una base trazable sin inconsistencias de numeración.
 
 - Etapa: S1 · Tipo: DOC · Prioridad: P0 · Esfuerzo: 8 h · Rol: A
-- Trazabilidad: A1,A3,RF-01:12,RNF-01:09
+- Trazabilidad: A1,A3,RF-01:12,RNF-01:05,RNF-08:11
 - Dependencias: SP-1
 
 - [ ] RF/RNF numerados y medibles
-- [ ] prioridades MoSCoW por valor y riesgo
+- [ ] prioridades MoSCoW por valor e impacto
 - [ ] reglas de prioridad/ausencias/duplicados aprobadas
 - [ ] metas identificadas como propuestas, no datos observados.
 
@@ -45,12 +45,12 @@ Construir una base trazable sin inconsistencias de numeración.
 Investigar durante un máximo de ocho horas cómo consultar turnos sin modificar el módulo externo.
 
 - Etapa: S1 · Tipo: SPIKE · Prioridad: P0 · Esfuerzo: 8 h · Rol: B
-- Trazabilidad: RF-10,RF-11
+- Trazabilidad: RF-10
 - Dependencias: SP-1
 
 - [ ] Contrato de consulta y autenticación documentado
 - [ ] respuestas de error y límites registrados
-- [ ] decisión sobre cancelación/reprogramación
+- [ ] confirmación de que reservas, cancelaciones y reprogramaciones quedan en el sistema del proveedor
 - [ ] si falta acceso, simulador y limitación explícitos.
 
 ## SP-5 · Validar arquitectura para cortes de internet
@@ -66,17 +66,16 @@ Verificar con una prueba acotada si tótem, médico y pantalla pueden compartir 
 - [ ] conflictos, permisos offline y turnos no descargados tratados
 - [ ] decisión con evidencia y esfuerzo estimado.
 
-## SP-6 · Fundamentar metodología y registrar riesgos iniciales
+## SP-6 · Fundamentar metodología y decisiones técnicas
 
 Definir organización incremental con Scrum y respuestas a incertidumbres.
 
 - Etapa: S1 · Tipo: DOC · Prioridad: P0 · Esfuerzo: 8 h · Rol: A+B
-- Trazabilidad: A2,A4,A5
+- Trazabilidad: A2,A4
 - Dependencias: SP-2, SP-4, SP-5
 
 - [ ] Tres metodologías comparadas sin afirmaciones absolutas
 - [ ] seis sprints y roles
-- [ ] al menos ocho riesgos con escala, exposición, responsable por rol, disparador y contingencia
 - [ ] ADR de stack y arquitectura.
 
 ## SP-7 · Diseñar manual de marca y prototipos por perfil
@@ -96,7 +95,7 @@ Como usuario, quiero interfaces coherentes y adaptadas a mi tarea.
 Comprobar comprensión y accesibilidad antes de programar todas las pantallas.
 
 - Etapa: S2 · Tipo: UX · Prioridad: P0 · Esfuerzo: 8 h · Rol: A
-- Trazabilidad: RNF-05,RNF-06,B4
+- Trazabilidad: RNF-05,RNF-08,B4
 - Dependencias: SP-7
 
 - [ ] Guion de pruebas, participantes y resultados reales documentados
@@ -109,7 +108,7 @@ Comprobar comprensión y accesibilidad antes de programar todas las pantallas.
 Crear estructura reproducible para frontend y backend.
 
 - Etapa: S2 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 10 h · Rol: B
-- Trazabilidad: A4,RNF-07
+- Trazabilidad: A4,RNF-09
 - Dependencias: SP-6
 
 - [ ] Instalación documentada
@@ -213,17 +212,18 @@ Como secretaria, quiero incorporar pacientes sin turno según reglas acordadas.
 - [ ] pruebas de empate y concurrencia
 - [ ] criterios aprobados con cliente simulado.
 
-## SP-17 · Definir flujo autorizado de reprogramación y cancelación
+## SP-17 · Aplicar tolerancia de 15 minutos y registrar contraturno
 
-Como secretaria, quiero resolver cambios de turno sin prometer operaciones que la API no admite.
+Como secretaria, quiero que el sistema cancele los turnos que superan la tolerancia y me permita asignar un contraturno.
 
-- Etapa: S3 · Tipo: HU · Prioridad: P1 · Esfuerzo: 6 h · Rol: A
-- Trazabilidad: RF-11
-- Dependencias: SP-4, SP-13, SP-15
+- Etapa: S3 · Tipo: HU · Prioridad: P0 · Esfuerzo: 10 h · Rol: A+B
+- Trazabilidad: RF-07,RF-11
+- Dependencias: SP-13, SP-14, SP-15
 
-- [ ] Interfaz deriva al circuito permitido o registra solicitud local pendiente
-- [ ] diferencia entre cambio solicitado y confirmado
-- [ ] no informa éxito ficticio al paciente.
+- [ ] Llegada posterior a 15 minutos rechazada en el tótem con mensaje y derivación a secretaría
+- [ ] turno sin llegada marcado como ausente
+- [ ] contraturno registrado en la cola del día con profesional y motivo
+- [ ] acción registrada en auditoría.
 
 ## SP-18 · Probar admisión y concurrencia de colas
 
@@ -317,57 +317,27 @@ Verificar paciente anunciado, cola, llamado y pantalla con y sin internet.
 - [ ] no confundir PWA cacheada con cola compartida
 - [ ] revisar inicio y cierre de atención para futuros indicadores.
 
-## SP-25 · Integrar plantillas y credenciales de WhatsApp Meta
-
-Enviar recordatorios mediante integración oficial directa sin Twilio ni n8n.
-
-- Etapa: S5 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 12 h · Rol: B
-- Trazabilidad: RF-07,RNF-04
-- Dependencias: SP-11, SP-13
-
-- [ ] Plantilla de utilidad y acceso habilitados o simulador declarado
-- [ ] destinatarios ficticios/de prueba
-- [ ] secretos en servidor
-- [ ] payload mínimo
-- [ ] errores y estado de aprobación documentados.
-
-## SP-26 · Programar recordatorios y registrar entrega
-
-Como afiliado, quiero recibir un recordatorio de mi turno vigente.
-
-- Etapa: S5 · Tipo: HU · Prioridad: P0 · Esfuerzo: 14 h · Rol: B
-- Trazabilidad: RF-07
-- Dependencias: SP-25, SP-13
-
-- [ ] Proceso servidor independiente del navegador
-- [ ] verificar vigencia antes de enviar
-- [ ] evitar duplicados entre instancias
-- [ ] reintentos acotados
-- [ ] webhooks verificados
-- [ ] envío y entrega diferenciados
-- [ ] baja de notificaciones respetada.
-
-## SP-27 · Construir indicadores con definiciones verificables
+## SP-25 · Construir indicadores con definiciones verificables
 
 Como director, quiero medir espera, ausentismo y ocupación por centro y especialidad.
 
 - Etapa: S5 · Tipo: HU · Prioridad: P1 · Esfuerzo: 14 h · Rol: A+B
-- Trazabilidad: RF-08
+- Trazabilidad: RF-08,RF-07
 - Dependencias: SP-10, SP-19, SP-24
 
 - [ ] Fórmulas y denominadores definidos
-- [ ] distinguir ausentes/cancelados/pendientes
+- [ ] distinguir ausentes, cancelados por tolerancia, contraturnos y pendientes
 - [ ] inicio-fin para ocupación
 - [ ] filtros por fecha y centro
 - [ ] datos conocidos producen resultados comprobables.
 
-## SP-28 · Completar auditoría y controles de datos
+## SP-26 · Completar auditoría y controles de datos
 
 Registrar acciones relevantes y limitar el acceso a información sensible.
 
 - Etapa: S5 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 10 h · Rol: B
-- Trazabilidad: RF-09,RNF-04,RNF-09
-- Dependencias: SP-11, SP-15, SP-19, SP-26
+- Trazabilidad: RF-09,RNF-04,RNF-11
+- Dependencias: SP-11, SP-15, SP-19
 
 - [ ] Actor/fecha/centro/acción
 - [ ] operador no puede alterar auditoría
@@ -375,13 +345,13 @@ Registrar acciones relevantes y limitar el acceso a información sensible.
 - [ ] retención y consentimiento según decisiones de Auditoría/Legales
 - [ ] pruebas de acceso.
 
-## SP-29 · Configurar despliegue, respaldos y restauración
+## SP-27 · Configurar despliegue, respaldos y restauración
 
 Publicar un entorno de prueba recuperable.
 
 - Etapa: S5 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 10 h · Rol: B
-- Trazabilidad: RNF-07,A4
-- Dependencias: SP-9, SP-10, SP-21, SP-28
+- Trazabilidad: RNF-09,A4
+- Dependencias: SP-9, SP-10, SP-21, SP-26
 
 - [ ] Render configurado
 - [ ] migraciones y salud
@@ -389,28 +359,27 @@ Publicar un entorno de prueba recuperable.
 - [ ] separar plan propuesto de recursos realmente contratados
 - [ ] no comprar ni crear cargos reales sin autorización.
 
-## SP-30 · Actualizar informe y preparar estrategia comercial
+## SP-28 · Actualizar informe y preparar estrategia comercial
 
 Mantener propuesta alineada con decisiones y evidencia.
 
 - Etapa: S5 · Tipo: DOC · Prioridad: P1 · Esfuerzo: 6 h · Rol: A
-- Trazabilidad: A1:A5,B1,B6
-- Dependencias: SP-2, SP-6, SP-12, SP-26, SP-29
+- Trazabilidad: A1:A4,B1,B6
+- Dependencias: SP-2, SP-6, SP-12, SP-27
 
 - [ ] Fundamentación de USD 2.000 mensuales como precio comercial
 - [ ] incluidos y consumos claros
 - [ ] tres objeciones
 - [ ] propuesta de valor y siguiente paso
-- [ ] matriz riesgos actualizada
 - [ ] fuentes sin precios inventados.
 
-## SP-31 · Ejecutar pruebas de aceptación, carga y accesibilidad
+## SP-29 · Ejecutar pruebas de aceptación, carga y accesibilidad
 
 Verificar criterios comprometidos antes de entregar.
 
 - Etapa: S6 · Tipo: TEST · Prioridad: P0 · Esfuerzo: 16 h · Rol: A+B
 - Trazabilidad: RNF-01:09,B3,B4
-- Dependencias: SP-24, SP-26, SP-27, SP-28, SP-29
+- Dependencias: SP-24, SP-25, SP-26, SP-27
 
 - [ ] Carga basada en concurrencia/pico justificados
 - [ ] autorización negativa
@@ -419,13 +388,13 @@ Verificar criterios comprometidos antes de entregar.
 - [ ] sin defectos críticos
 - [ ] resultados y limitaciones conservados.
 
-## SP-32 · Redactar manual de usuario y material de capacitación
+## SP-30 · Redactar manual de usuario y material de capacitación
 
 Como usuario final, quiero instrucciones por perfil con capturas reales.
 
 - Etapa: S6 · Tipo: DOC · Prioridad: P0 · Esfuerzo: 10 h · Rol: A
 - Trazabilidad: B5
-- Dependencias: SP-20, SP-26, SP-27, SP-31
+- Dependencias: SP-20, SP-25, SP-29
 
 - [ ] Flujos paciente/secretaria/médico/director y soporte
 - [ ] requisitos de acceso
@@ -433,13 +402,13 @@ Como usuario final, quiero instrucciones por perfil con capturas reales.
 - [ ] capturas del sistema real
 - [ ] guion para semana de capacitación.
 
-## SP-33 · Cerrar informe, contrato y declaración de IA
+## SP-31 · Cerrar informe, contrato y declaración de IA
 
 Preparar documentos completos conforme a la consigna.
 
 - Etapa: S6 · Tipo: DOC · Prioridad: P0 · Esfuerzo: 8 h · Rol: A+B
 - Trazabilidad: A1:A5,B1,IA
-- Dependencias: SP-30, SP-31, SP-32
+- Dependencias: SP-28, SP-29, SP-30
 
 - [ ] Informe de 8–15 páginas sin anexos, carátula/índice/páginas/fuentes
 - [ ] contrato firmado por grupo con espacio cliente
@@ -447,96 +416,95 @@ Preparar documentos completos conforme a la consigna.
 - [ ] trazabilidad
 - [ ] comparación con checklist oficial.
 
-## SP-34 · Preparar demo pública y respaldo audiovisual
+## SP-32 · Preparar demo pública y respaldo audiovisual
 
 Demostrar un circuito completo con datos ficticios.
 
 - Etapa: S6 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 6 h · Rol: B
 - Trazabilidad: B3
-- Dependencias: SP-29, SP-31
+- Dependencias: SP-27, SP-29
 
 - [ ] URL accesible, README de ejecución, frontend/backend/persistencia/auth
 - [ ] video de 2–3 minutos
 - [ ] no depender de API real no habilitada sin avisar
 - [ ] demo probada en equipo de defensa.
 
-## SP-35 · Diseñar presentación propia y guion equilibrado
+## SP-33 · Diseñar presentación propia y guion equilibrado
 
 Comunicar la propuesta como reunión comercial simulada.
 
 - Etapa: S6 · Tipo: DOC · Prioridad: P0 · Esfuerzo: 8 h · Rol: A
 - Trazabilidad: C,B4,B6
-- Dependencias: SP-30, SP-33, SP-34
+- Dependencias: SP-28, SP-31, SP-32
 
 - [ ] Diseño propio y marca
 - [ ] 25 minutos repartidos entre ambos
 - [ ] preguntas 15 minutos
-- [ ] diagnóstico/solución/alcance/demo/riesgos/cierre
+- [ ] diagnóstico/solución/alcance/demo/cierre
 - [ ] evitar jerga sin explicar.
 
-## SP-36 · Ensayar defensa y verificar entrega 48 horas antes
+## SP-34 · Ensayar defensa y verificar entrega 48 horas antes
 
 Asegurar que ambos integrantes defienden todo el proyecto.
 
 - Etapa: S6 · Tipo: TEST · Prioridad: P0 · Esfuerzo: 8 h · Rol: A+B
 - Trazabilidad: C,B2,B3
-- Dependencias: SP-33, SP-34, SP-35
+- Dependencias: SP-31, SP-32, SP-33
 
 - [ ] Ensayo con cinco preguntas del caso y cambio de condiciones
 - [ ] ambos explican código y modificación
 - [ ] enlaces/documentos accesibles
 - [ ] checklist de entrega y evidencia de trabajo real.
 
-## SP-37 · Preparar centro piloto y capacitar durante una semana
+## SP-35 · Preparar centro piloto y capacitar durante una semana
 
 Planificar capacitación por rol antes de la prueba operativa.
 
 - Etapa: P1 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 12 h · Rol: A+B
-- Trazabilidad: B1,B5,RNF-07
-- Dependencias: SP-31, SP-32, SP-36
+- Trazabilidad: B1,B5,RNF-09
+- Dependencias: SP-29, SP-30, SP-34
 
 - [ ] Cronograma semanal, ejercicios y evaluación por rol
 - [ ] dispositivos y contingencia verificados
 - [ ] autorización de piloto simulada
 - [ ] identificar actividad académica vs implementación real.
 
-## SP-38 · Desplegar piloto y habilitar período de prueba
+## SP-36 · Desplegar piloto y habilitar período de prueba
 
 Iniciar operación controlada del primer centro.
 
 - Etapa: P1 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 10 h · Rol: B
-- Trazabilidad: B1,RNF-03,RNF-07
-- Dependencias: SP-37, SP-29
+- Trazabilidad: B1,RNF-03,RNF-09
+- Dependencias: SP-35, SP-27
 
 - [ ] Criterios go/no-go
 - [ ] respaldo y rollback
 - [ ] registro de inicio para abono USD 2.000 y prueba30 días
 - [ ] no desplegar datos reales ni contratar servicios en este TP.
 
-## SP-39 · Gestionar 30 días de prueba y ajustes incluidos
+## SP-37 · Gestionar 30 días de prueba y ajustes incluidos
 
 Dar seguimiento a incidencias sin ampliar alcance informalmente.
 
 - Etapa: P1 · Tipo: TASK · Prioridad: P0 · Esfuerzo: 16 h · Rol: A+B
 - Trazabilidad: B1,B5
-- Dependencias: SP-38
+- Dependencias: SP-36
 
 - [ ] Registro de incidencias y severidades
 - [ ] defectos/ajustes incluidos sin cargo extra
 - [ ] nuevas funciones por cambio de alcance
 - [ ] criterios de aceptación del piloto y reporte de cierre.
 
-## SP-40 · Planificar extensión progresiva a cinco centros restantes
+## SP-38 · Planificar extensión progresiva a cinco centros restantes
 
 Extender solo tras aceptar el piloto.
 
 - Etapa: P1 · Tipo: TASK · Prioridad: P1 · Esfuerzo: 12 h · Rol: A+B
-- Trazabilidad: B1,RNF-07
-- Dependencias: SP-39
+- Trazabilidad: B1,RNF-09
+- Dependencias: SP-37
 
-- [ ] Orden por infraestructura y riesgo
+- [ ] Orden por infraestructura y conectividad
 - [ ] checklist por centro
 - [ ] compatibilidad/reversión
 - [ ] responsable y validación
 - [ ] fechas posteriores a la aceptación, sin prometer simultaneidad.
-

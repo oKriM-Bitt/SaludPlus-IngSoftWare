@@ -18,7 +18,7 @@ Etapa actual: desarrollo del frontend con datos simulados. Ya están el tótem d
 
 ## Stack propuesto
 React + TypeScript + Vite, vite-plugin-pwa, NestJS, PostgreSQL, Socket.IO y Render.
-Los recordatorios se programarán desde NestJS mediante la API oficial de WhatsApp de Meta. No se utilizarán Twilio ni n8n.
+El sistema interviene desde que el paciente llega al centro y verifica su turno en el tótem. La reserva, reprogramación y cancelación de turnos quedan en el sistema del proveedor, y no se envían recordatorios.
 PostgreSQL no tiene costo de licencia para este uso. El alojamiento, administración y soporte son conceptos distintos.
 
 ## Gestión

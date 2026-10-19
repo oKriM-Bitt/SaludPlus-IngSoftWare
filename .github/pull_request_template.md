@@ -7,6 +7,6 @@ Closes #
 ## Validación
 Indicar pruebas realizadas y evidencia. Distinguir lo pendiente.
 
-## Riesgos y documentación
+## Impacto y documentación
 Explicar cambios de alcance, datos o despliegue.
 

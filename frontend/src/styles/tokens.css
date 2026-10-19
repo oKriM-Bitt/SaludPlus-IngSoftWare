@@ -1,0 +1,44 @@
+/* Tokens del manual de marca SaludPlus (B.4) */
+:root {
+  /* Marca */
+  --color-primary: #0a6ebd;
+  --color-primary-hover: #085a9b;
+  --color-secondary: #0b2440;
+  --color-accent: #0d9488;
+  --color-accent-dark: #0f766e;
+  --color-bg: #f4f8fc;
+  --color-surface: #ffffff;
+
+  /* Neutros */
+  --color-text: #1f2937;
+  --color-text-secondary: #475569;
+  --color-border: #64748b;
+  --color-border-soft: #cbd5e1;
+  --color-disabled-bg: #e2e8f0;
+
+  /* Semánticos */
+  --color-success: #166534;
+  --color-success-bg: #ecfdf3;
+  --color-warning: #92400e;
+  --color-error: #b91c1c;
+  --color-info: #1d4edb;
+
+  /* Tipografía */
+  --font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Espaciado (4-8-12-16-24-32-48) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radios */
+  --radius-control: 8px;
+  --radius-card: 12px;
+
+  /* Foco visible */
+  --focus-ring: 0 0 0 3px var(--color-surface), 0 0 0 6px var(--color-secondary);
+}

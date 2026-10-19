@@ -1,0 +1,363 @@
+/* Tótem de autogestión (01 TÓTEM · K01–K10)
+   Diseño base: 1080×1920 vertical. Se adapta de celular a pantalla grande. */
+
+.totem {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  --pad: clamp(16px, 6vw, 64px);
+  --content-max: 960px;
+}
+
+/* Encabezado */
+.totem__header,
+.totem__footer {
+  background: var(--color-surface);
+  padding-inline: var(--pad);
+}
+
+.totem__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: clamp(80px, 16.30vw, 176px);
+}
+
+.totem__header .logo {
+  font-size: clamp(24px, 3.70vw, 40px) !important;
+}
+
+.totem__header .logo svg {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.totem__centro {
+  color: var(--color-text-secondary);
+  font-size: clamp(15px, 2.22vw, 24px);
+  text-align: right;
+}
+
+/* Contenido */
+.totem__main {
+  flex: 1;
+  display: flex;
+  padding: clamp(24px, 4vw, 48px) var(--pad);
+}
+
+.totem__container {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.totem__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Indicador de pasos */
+.stepper {
+  list-style: none;
+  margin: 0 0 clamp(24px, 4vw, 48px);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.stepper__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stepper__bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+}
+
+.stepper__item--completo .stepper__bar,
+.stepper__item--actual .stepper__bar {
+  background: var(--color-primary);
+}
+
+.stepper__label {
+  font-size: clamp(14px, 2.22vw, 24px);
+  color: var(--color-text-secondary);
+}
+
+.stepper__item--actual .stepper__label {
+  color: var(--color-secondary);
+  font-weight: 700;
+}
+
+/* Tipografía */
+.totem__title {
+  color: var(--color-secondary);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-size: clamp(30px, 5.19vw, 56px);
+}
+
+.totem__title--xl {
+  font-size: clamp(36px, 6.67vw, 72px);
+}
+
+.totem__title:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.totem__subtitle {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: clamp(18px, 2.59vw, 28px);
+}
+
+.totem__lead {
+  color: var(--color-text-secondary);
+  font-size: clamp(19px, 2.96vw, 32px);
+  line-height: 1.35;
+}
+
+.totem__lead--dark {
+  color: var(--color-text);
+}
+
+.totem__small {
+  color: var(--color-text-secondary);
+  font-size: clamp(15px, 2.22vw, 24px);
+}
+
+/* Pantallas centradas (bienvenida y resultados) */
+.totem__center {
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 3vw, 40px);
+  padding-block: var(--space-6);
+}
+
+.totem__hero-icon {
+  color: var(--color-primary);
+  width: clamp(72px, 9.63vw, 104px);
+  height: auto;
+}
+
+.totem__status-icon {
+  width: clamp(64px, 8.89vw, 96px);
+  height: auto;
+}
+
+.totem__status-icon--success {
+  color: var(--color-success);
+}
+
+.totem__status-icon--warning {
+  color: var(--color-warning);
+}
+
+.totem__status-icon--error {
+  color: var(--color-error);
+}
+
+.totem__hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: clamp(16px, 3vw, 32px);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  font-size: clamp(18px, 2.59vw, 28px);
+  color: var(--color-text-secondary);
+}
+
+.totem__hint strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Formulario */
+.totem__form {
+  display: flex;
+  flex-direction: column;
+}
+
+.totem__label {
+  margin-top: clamp(24px, 3vw, 40px);
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+  font-size: clamp(18px, 2.59vw, 28px);
+  color: var(--color-text);
+}
+
+.totem__input {
+  width: 100%;
+  min-height: clamp(64px, 8.89vw, 96px);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--color-secondary);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-secondary);
+  font: inherit;
+  font-size: clamp(24px, 3.70vw, 40px);
+  letter-spacing: 0.04em;
+}
+
+.totem__input::placeholder {
+  color: var(--color-text-secondary);
+  letter-spacing: 0;
+}
+
+.totem__input--error {
+  border-color: var(--color-error);
+}
+
+.totem__field-error {
+  margin-top: var(--space-2);
+  color: var(--color-error);
+  font-size: clamp(16px, 2.22vw, 24px);
+}
+
+/* Teclado numérico */
+.keypad {
+  margin-top: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.keypad__key {
+  min-height: clamp(64px, 11.85vw, 128px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-secondary);
+  font-size: clamp(28px, 4.44vw, 48px);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.keypad__key:active {
+  background: #eaf3fb;
+}
+
+.keypad__key--text {
+  font-size: clamp(16px, 2.59vw, 28px);
+}
+
+.totem__actions {
+  margin-top: clamp(16px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.5vw, 32px);
+}
+
+/* Datos del turno */
+.turno-card {
+  margin: clamp(24px, 3vw, 32px) 0 0;
+  padding: clamp(24px, 4vw, 48px);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.turno-card dt {
+  margin-top: clamp(16px, 2.4vw, 28px);
+  color: var(--color-text-secondary);
+  font-size: clamp(15px, 2.22vw, 24px);
+}
+
+.turno-card dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-secondary);
+  font-weight: 600;
+  font-size: clamp(24px, 3.70vw, 40px);
+}
+
+.turno-card dd.turno-card__paciente {
+  margin: 0;
+  font-size: clamp(20px, 2.96vw, 32px);
+}
+
+.totem__waiting {
+  margin-top: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: clamp(18px, 2.59vw, 28px);
+}
+
+.spinner--lg {
+  width: 40px;
+  height: 40px;
+  color: var(--color-primary);
+}
+
+/* Tarjeta de número asignado */
+.result-card {
+  padding: clamp(24px, 4vw, 48px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.result-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.result-card__numero {
+  color: var(--color-secondary);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-size: clamp(72px, 14.81vw, 160px);
+}
+
+.result-card__consultorio {
+  color: var(--color-secondary);
+  font-weight: 600;
+  font-size: clamp(24px, 3.70vw, 40px);
+}
+
+/* Pie */
+.totem__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: clamp(64px, 11.85vw, 128px);
+  color: var(--color-text-secondary);
+  font-size: clamp(15px, 2.22vw, 24px);
+}
+
+.totem__footer-icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+/* Pantallas bajas (celular apaisado, notebooks): compactar */
+@media (max-height: 760px) {
+  .keypad__key {
+    min-height: 56px;
+  }
+  .totem__center {
+    padding-block: var(--space-4);
+  }
+}

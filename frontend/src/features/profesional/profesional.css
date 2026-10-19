@@ -1,0 +1,249 @@
+/* Vista del profesional (03 PROFESIONAL · P01–P06)
+   Diseño base: tablet 1024×768. Se adapta a celular y a pantallas grandes. */
+
+.prof {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  --pad: clamp(16px, 3.12vw, 32px);
+}
+
+.prof__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  min-height: clamp(64px, 14.06vw, 144px);
+  padding: var(--space-3) var(--pad);
+  background: var(--color-surface);
+}
+
+.prof__header .logo {
+  font-size: clamp(20px, 2.34vw, 24px) !important;
+}
+
+.prof__header .logo svg {
+  width: 1.3em;
+  height: 1.3em;
+}
+
+.prof__conexion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: clamp(14px, 1.56vw, 16px);
+}
+
+.prof__conexion--on {
+  color: var(--color-success);
+}
+
+.prof__conexion--off {
+  color: var(--color-warning);
+}
+
+.prof__main {
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.34vw, 24px);
+  padding: clamp(20px, 3.52vw, 36px) var(--pad) var(--space-5);
+}
+
+/* Título y contador */
+.prof__titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.prof__titulo h1 {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: clamp(26px, 3.32vw, 34px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.prof__titulo p {
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: clamp(16px, 1.95vw, 20px);
+}
+
+.prof__contador {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.prof__contador strong {
+  color: var(--color-secondary);
+  font-size: clamp(28px, 3.32vw, 34px);
+  line-height: 1.2;
+}
+
+.prof__contador span {
+  color: var(--color-text-secondary);
+  font-size: clamp(13px, 1.56vw, 16px);
+}
+
+/* Aviso sin conexión */
+.prof__aviso {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-card);
+  background: #fef9e8;
+  color: var(--color-warning);
+}
+
+.prof__aviso svg {
+  flex-shrink: 0;
+}
+
+.prof__aviso div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: clamp(14px, 1.46vw, 15px);
+}
+
+.prof__aviso strong {
+  font-size: clamp(15px, 1.66vw, 17px);
+}
+
+/* Tarjeta central */
+.prof__card {
+  flex: 1;
+  min-height: clamp(260px, 32.23vw, 330px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 3.12vw, 32px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.prof__paciente {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.17vw, 12px);
+}
+
+.prof__paciente-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: clamp(17px, 1.95vw, 20px);
+}
+
+.prof__paciente-encabezado .chip {
+  font-size: clamp(14px, 1.46vw, 15px);
+}
+
+.prof__numero {
+  color: var(--color-secondary);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-size: clamp(72px, 10.16vw, 104px);
+  margin-top: var(--space-2);
+}
+
+.prof__nombre {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: clamp(20px, 2.34vw, 24px);
+}
+
+.prof__detalle {
+  color: var(--color-text-secondary);
+  font-size: clamp(14px, 1.56vw, 16px);
+}
+
+.prof__mensaje {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.prof__mensaje svg,
+.prof__spinner {
+  width: clamp(48px, 5.47vw, 56px);
+  height: clamp(48px, 5.47vw, 56px);
+}
+
+.prof__spinner {
+  color: var(--color-primary);
+  border-width: 2px;
+}
+
+.prof__mensaje h2 {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: clamp(19px, 2.34vw, 24px);
+  font-weight: 700;
+}
+
+.prof__mensaje p {
+  color: var(--color-text-secondary);
+  font-size: clamp(14px, 1.56vw, 16px);
+}
+
+.prof__icono--error {
+  color: var(--color-error);
+}
+
+.prof__icono--alerta {
+  color: var(--color-warning);
+}
+
+.prof__icono--info {
+  color: var(--color-primary);
+}
+
+/* Botón principal: un solo toque */
+.btn.prof__accion {
+  min-height: clamp(72px, 9.38vw, 96px);
+  font-size: clamp(22px, 3.12vw, 32px);
+}
+
+.btn.prof__accion--consultando {
+  background: var(--color-disabled-bg);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.prof__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  color: var(--color-text-secondary);
+  font-size: clamp(13px, 1.37vw, 14px);
+}
+
+/* Pantallas bajas (tablet apaisada, notebooks) */
+@media (max-height: 700px) {
+  .prof__card {
+    min-height: 220px;
+  }
+}

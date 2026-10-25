@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Logo } from '../../components/Logo';
-import { Icon, type IconName } from '../../components/Icon';
-import { Button } from '../../components/Button';
+import { Logo } from '../../componentes/Logo';
+import { Icon, type IconName } from '../../componentes/Icon';
+import { Button } from '../../componentes/Button';
 import {
   buscarTurno,
   registrarLlegada,
   SinConexionError,
   type Admision,
   type Turno,
-} from '../../services/turnos';
+} from '../../servicios/turnos';
 import { Stepper } from './Stepper';
 import { Keypad } from './Keypad';
 import { TurnoDetalle } from './TurnoDetalle';

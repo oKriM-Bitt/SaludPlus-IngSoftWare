@@ -1,5 +1,5 @@
-import { StatusChip } from '../../components/StatusChip';
-import type { Admision } from '../../services/turnos';
+import { StatusChip } from '../../componentes/StatusChip';
+import type { Admision } from '../../servicios/turnos';
 
 export function ResultCard({ admision }: { admision: Admision }) {
   return (

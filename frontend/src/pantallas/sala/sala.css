@@ -1,0 +1,307 @@
+/* Pantalla de sala de espera (04 SALA DE ESPERA · T01–T05)
+   Diseño base: TV 1920×1080 horizontal, legible a 8 metros. Se adapta a pantallas chicas. */
+
+.sala {
+  --sala-fondo: #0b2440;
+  --sala-panel: #15345a;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 1.67vw, 32px);
+  padding: clamp(16px, 2.50vw, 48px);
+  background: var(--sala-fondo);
+  color: #fff;
+}
+
+.sala__header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.sala__logo {
+  display: inline-flex;
+  padding: clamp(8px, 0.73vw, 14px) clamp(12px, 1.25vw, 24px);
+  background: #fff;
+  border-radius: var(--radius-control);
+}
+
+.sala__logo .logo {
+  font-size: clamp(22px, 2.08vw, 40px) !important;
+}
+
+.sala__logo .logo svg {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.sala__centro {
+  text-align: center;
+  font-size: clamp(16px, 1.67vw, 32px);
+}
+
+.sala__hora {
+  font-size: clamp(22px, 2.29vw, 44px);
+  font-weight: 700;
+  text-align: right;
+}
+
+.sala__main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  gap: clamp(16px, 1.67vw, 32px);
+}
+
+.sala__panel {
+  background: var(--sala-panel);
+  border-radius: var(--radius-card);
+  padding: clamp(20px, 2.08vw, 40px);
+}
+
+/* Llamado actual */
+.sala__llamado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: clamp(260px, 31.25vw, 600px);
+  transition: box-shadow 0.3s ease;
+}
+
+.sala__llamado-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: clamp(24px, 2.50vw, 48px);
+  font-weight: 600;
+}
+
+.sala__llamado-etiqueta svg {
+  width: 1em;
+  height: 1em;
+}
+
+.sala__numero {
+  font-size: clamp(96px, 12.50vw, 240px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.sala__consultorio {
+  font-size: clamp(36px, 4.17vw, 80px);
+  font-weight: 600;
+}
+
+.sala__llamado--nuevo {
+  box-shadow: 0 0 0 6px var(--color-accent);
+  animation: destello 1s ease-in-out 3;
+}
+
+@keyframes destello {
+  50% {
+    background: #1d4a7a;
+  }
+}
+
+.sala__mensaje {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 1.25vw, 24px);
+  max-width: 1100px;
+}
+
+.sala__mensaje svg,
+.sala__spinner {
+  width: clamp(56px, 5.00vw, 96px);
+  height: clamp(56px, 5.00vw, 96px);
+}
+
+.sala__spinner {
+  border-width: 2px;
+}
+
+.sala__mensaje h1 {
+  margin: 0;
+  font-size: clamp(28px, 3.33vw, 64px);
+  font-weight: 700;
+}
+
+.sala__mensaje p {
+  font-size: clamp(18px, 1.88vw, 36px);
+  line-height: 1.3;
+}
+
+.sala__mensaje .sala__mensaje-chico {
+  font-size: clamp(16px, 1.56vw, 30px);
+}
+
+/* Espera estimada */
+.sala__esperas {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 1.25vw, 24px);
+}
+
+.sala__esperas h2,
+.sala__historial h2 {
+  margin: 0;
+  font-size: clamp(20px, 1.88vw, 36px);
+  font-weight: 700;
+}
+
+.sala__esperas dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.46vw, 28px);
+}
+
+.sala__esperas dl div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.sala__esperas dt {
+  font-size: clamp(18px, 1.67vw, 32px);
+}
+
+.sala__esperas dd {
+  margin: 0;
+  font-size: clamp(20px, 1.98vw, 38px);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sala__demora {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: clamp(16px, 1.46vw, 28px);
+  border-radius: var(--radius-card);
+  background: #fef9e8;
+  color: var(--color-warning);
+  font-size: clamp(16px, 1.67vw, 32px);
+}
+
+.sala__demora strong {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: clamp(18px, 1.77vw, 34px);
+}
+
+.sala__demora svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+.sala__esperas-vacio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  font-size: clamp(16px, 1.67vw, 32px);
+  line-height: 1.3;
+}
+
+.sala__esperas-vacio svg {
+  width: clamp(32px, 2.50vw, 48px);
+  height: clamp(32px, 2.50vw, 48px);
+}
+
+/* Últimos llamados */
+.sala__historial {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sala__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 1.46vw, 28px);
+}
+
+.sala__lista li {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.46vw, 28px);
+  padding: clamp(14px, 1.46vw, 28px);
+  background: var(--sala-panel);
+  border-radius: var(--radius-card);
+}
+
+.sala__lista strong {
+  font-size: clamp(30px, 3.02vw, 58px);
+  font-weight: 700;
+}
+
+.sala__lista span {
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(14px, 1.35vw, 26px);
+  line-height: 1.15;
+}
+
+.sala__lista b {
+  font-size: clamp(22px, 2.08vw, 40px);
+}
+
+.sala__historial-vacio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: clamp(16px, 1.67vw, 32px);
+  background: var(--sala-panel);
+  border-radius: var(--radius-card);
+  font-size: clamp(18px, 1.77vw, 34px);
+}
+
+.sala__historial-vacio svg {
+  flex-shrink: 0;
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* Pantallas chicas y verticales */
+@media (max-width: 900px) {
+  .sala__header {
+    grid-template-columns: auto 1fr;
+  }
+  .sala__centro {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left;
+  }
+  .sala__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sala__lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .sala__lista li {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .sala__lista strong {
+    font-size: 26px;
+  }
+  .sala__numero {
+    font-size: 88px;
+  }
+}

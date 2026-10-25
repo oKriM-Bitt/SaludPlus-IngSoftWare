@@ -1,4 +1,4 @@
-import type { Turno } from '../../services/turnos';
+import type { Turno } from '../../servicios/turnos';
 
 const hora = (d: Date) => d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 

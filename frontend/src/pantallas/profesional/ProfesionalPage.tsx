@@ -1,28 +1,23 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Logo } from '../../components/Logo';
-import { Icon } from '../../components/Icon';
-import { Button } from '../../components/Button';
-import { StatusChip } from '../../components/StatusChip';
+import { Logo } from '../../componentes/Logo';
+import { Icon } from '../../componentes/Icon';
+import { Button } from '../../componentes/Button';
+import { StatusChip } from '../../componentes/StatusChip';
 import {
   escucharCambios,
   finalizarAtencion,
   hayConexion,
   llamarSiguiente,
   obtenerCola,
+  profesionalPorConsultorio,
   SinConexionError,
   type ColaConsultorio,
-} from '../../services/turnos';
-import { fechaLarga, hora, minutosEntre } from '../../utils/fechas';
+} from '../../servicios/turnos';
+import { fechaLarga, hora, minutosEntre } from '../../utilidades/fechas';
 import './profesional.css';
 
 const CENTRO = 'Centro Villa Norte';
 const ACTUALIZAR_CADA_MS = 5_000;
-
-/** Datos ficticios del consultorio. Con backend, vendrán de la sesión del profesional. */
-const CONSULTORIOS: Record<string, { profesional: string; especialidad: string }> = {
-  '4': { profesional: 'Dra. Lucía Ferrer', especialidad: 'Clínica médica' },
-  '6': { profesional: 'Dra. Paula Ríos', especialidad: 'Pediatría' },
-};
 
 type Estado =
   | { tipo: 'cargando' } // P04
@@ -32,7 +27,7 @@ type Estado =
 
 export function ProfesionalPage() {
   const consultorio = new URLSearchParams(window.location.search).get('consultorio') ?? '4';
-  const datos = CONSULTORIOS[consultorio] ?? CONSULTORIOS['4'];
+  const datos = profesionalPorConsultorio(consultorio);
 
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' });
   const [accion, setAccion] = useState<'llamando' | 'finalizando' | null>(null);
@@ -116,7 +111,7 @@ export function ProfesionalPage() {
           <div>
             <h1>Consultorio {consultorio}</h1>
             <p>
-              {datos.profesional} · {datos.especialidad}
+              {datos.nombre} · {datos.especialidad}
             </p>
           </div>
           <div className="prof__contador" aria-live="polite">

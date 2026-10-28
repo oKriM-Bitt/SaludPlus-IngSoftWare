@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite. Incluye, según el diseño de Figma:
 
-- **Tótem de autogestión** `/totem` (K01–K10), responsive desde celular hasta la pantalla vertical de 1080×1920.
+- **Tótem de autogestión** `/totem` (K01–K15), responsive desde celular hasta la pantalla vertical de 1080×1920.
 - **Vista del profesional** `/profesional` (P01–P06), pensada para tablet 1024×768 y responsive.
 - **Panel de secretaría** `/secretaria` (S01–S06), pensado para escritorio 1440×900; en celular la tabla pasa a tarjetas.
 - **Pantalla de sala de espera** `/sala` (T01–T05), para TV 1920×1080 y legible a 8 metros; también se adapta a pantallas chicas.
@@ -24,7 +24,7 @@ npm run dev
 Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (`/totem`) y la sala (`/sala`) se abren sin usuario.
 
 - `npm run build`: compila para producción (carpeta `dist/`).
-- `npm test`: corre las pruebas (tolerancia, tiempos de espera, usuarios y permisos).
+- `npm test`: corre las pruebas (tolerancia, tiempos de espera, usuarios y permisos, llamado fuera de orden y atajos de teclado).
 
 ## Usuarios de prueba (ficticios)
 
@@ -52,7 +52,20 @@ El proveedor de turnos está **simulado** en `src/servicios/turnos.ts`. Los hora
 | 28444555 | 100200301 | Turno de hace 25 minutos → **Tolerancia vencida** |
 | 25666777 | 100200302 | Llegada ya registrada (A019) |
 | 33888999 | 100200303 | Falla el primer registro (**Error de registro**); al tocar Reintentar, funciona |
-| cualquier otro | | Turno no encontrado |
+| 27123456 | | Afiliada **sin turno** (Elena T.): para probar "No tengo turno" |
+| 31555666 | | Afiliado **sin turno** (Pablo Q.) |
+| cualquier otro | | Turno no encontrado / afiliado no encontrado |
+
+### Tótem: con turno y sin turno (DEV-32 y DEV-33)
+
+La primera pantalla pregunta **"Tengo turno"** o **"No tengo turno"**. Después el paciente elige el **servicio** (Clínica médica, Cardiología o Pediatría) con botones grandes, y recién ahí ingresa el número.
+
+- **Con turno:** DNI o afiliado → verificación → regla de 15 minutos, igual que antes. El servicio elegido se usa para validar el turno: si Marta (30111222, turno de Clínica médica) elige Cardiología, el tótem avisa "Su turno es de otro servicio" y deja seguir con su turno o elegir otro servicio. Si el número no aparece, ofrece pasar a "No tengo turno".
+- **Sin turno:** solo DNI → confirmación de datos → queda registrado como **demanda espontánea** del servicio elegido, con número de orden y **sin profesional**. Probalo con 27123456 (Elena T.).
+- **No se duplican admisiones:** si el mismo DNI vuelve a anotarse, el tótem muestra "Ya está en espera" con el mismo número. Si dice no tener turno pero tiene uno hoy (33888999), lo manda al camino "con turno"; si su turno venció (28444555), lo deriva a secretaría para un contraturno.
+- "Volver" retrocede un paso en cada pantalla. El tótem vuelve solo al inicio después de 45 segundos sin uso y en ese momento borra el servicio y el número cargados.
+
+En **secretaría**, la demanda del tótem aparece en la tabla como "Sin asignar · servicio" y con un aviso arriba. **Asignar profesional** muestra primero a los profesionales de ese servicio; al confirmar, el paciente conserva su número y su hora de llegada y le aparece al profesional. El filtro de profesional tiene la opción "Sin asignar".
 
 Para ver la pantalla **Sin conexión**, agregá `?offline=1` a la dirección (por ejemplo `/totem?offline=1` o `/profesional?offline=1`) o desconectá la red.
 
@@ -66,6 +79,17 @@ Con `lferrer` muestra el consultorio 4 (Dra. Lucía Ferrer); con `direccion` se 
    - **No se presentó** se habilita después de 2 llamados: el paciente queda **ausente** y la secretaría lo ve en la cola.
    - Arriba se ven los pacientes esperando y la **mayor espera** (#46).
 3. Si registrás a Marta (DNI 30111222) en el tótem, aparece en el profesional como A023 sin recargar la página.
+
+### Tabla de pacientes y uso con teclado (DEV-31 y DEV-38)
+
+A la derecha (abajo en tablet vertical y celular) está la tabla **Pacientes en espera** con número, nombre abreviado, horario del turno, hora de llegada y tiempo en espera. Se actualiza sola cuando llegan pacientes desde el tótem o la secretaría.
+
+- Cada fila tiene **Llamar**; el botón **Llamar al siguiente** sigue disponible.
+- Si hay un paciente en atención, primero pide **finalizarlo** ("Finalizar y llamar a A0xx").
+- Llamar a alguien que no es el próximo pide confirmación y queda registrado (quién, cuándo, a qué paciente y a quién se salteó) en `saludplus.auditoria` del navegador. Los registros solo se agregan: no se editan ni se borran, ni siquiera con `?reset=1`.
+- **Atajos:** `N` llamar al siguiente, `R` llamar nuevamente, `F` finalizar atención, `L` ir a la lista. En la lista, flechas ↑ ↓ (e Inicio/Fin) para elegir paciente y `Enter` para llamarlo. Se muestran en pantalla y no se activan mientras se escribe en un campo, con Ctrl/Alt/Cmd ni con un diálogo o el menú abiertos.
+- Con el teclado se piden **las mismas confirmaciones** que con el mouse (usan las mismas funciones). En el diálogo, el foco empieza en "Cancelar" y Escape lo cierra.
+- Todos los botones se recorren con Tab y muestran el foco; la fila elegida se marca con borde y fondo.
 
 Otros estados: `/profesional?error=1` (error de consulta) y `/profesional?offline=1` (sin conexión). La pantalla "Consultando…" aparece al cargar. Se actualiza sola cada 5 segundos.
 
@@ -105,6 +129,16 @@ La cola se guarda en el navegador (localStorage) para que el tótem y el profesi
 - **Inicio de sesión y menú por rol (#47, #48):** usuarios ficticios en `src/servicios/usuarios.ts`; la sesión vive en el navegador hasta que exista la autenticación del backend.
 - Accesibilidad: foco visible, foco en el título de cada pantalla, mensajes anunciados a lectores de pantalla, botones de 64 px o más y contraste del manual de marca.
 
+## Limitaciones y pendientes (DEV-31, DEV-32, DEV-33 y DEV-38)
+
+- Los servicios del centro salen de la lista simulada de profesionales; con el backend vendrán de la configuración de cada centro.
+- La identificación sin turno usa un **padrón simulado** (`padron()` en `turnos.ts`). Falta definir con SaludPlus qué hacer si el DNI no figura: hoy se deriva a secretaría.
+- La demanda espontánea del tótem guarda el DNI ficticio solo para evitar duplicados y nunca se muestra. Con el backend, el control de duplicados debe hacerse en el servidor.
+- La auditoría de llamados fuera de orden vive en el navegador; sin backend no es realmente inalterable (RF-09 queda pendiente para el servidor). Todavía no hay una pantalla para consultarla.
+- Si dos profesionales llaman al mismo paciente a la vez, el segundo ve "Ese paciente ya no está en espera"; la garantía real necesita el backend.
+- Los atajos usan letras sueltas (N, R, F, L). Falta validarlos con profesionales reales y con lectores de pantalla.
+- Probado en Chrome (escritorio 1440 px, tablet 1024 y 768 px, celular 390 px). Falta probar en el tótem físico.
+
 ## Estructura
 
 Ordenada igual que las láminas de Figma:
@@ -112,7 +146,7 @@ Ordenada igual que las láminas de Figma:
 ```
 src/
   pantallas/
-    totem/          01 Tótem de autogestión (K01–K10)
+    totem/          01 Tótem de autogestión (K01–K15)
     secretaria/     02 Panel de secretaría (S01–S06) y sus ventanas modales
     profesional/    03 Vista del profesional (P01–P06)
     sala/           04 Pantalla de sala de espera (T01–T05)
@@ -121,7 +155,7 @@ src/
     inicio/         Menú principal según el rol
   componentes/      Piezas compartidas: Logo, Icon, Button, StatusChip, Alerta, MenuUsuario, TiempoEspera, RutaProtegida
   estilos/          Tokens del manual de marca, estilos globales y de componentes
-  servicios/        Turnos y cola simulados, tolerancia, espera, sesión, usuarios y sonido (con pruebas)
+  servicios/        Turnos y cola simulados, tolerancia, espera, llamados y atajos, sesión, usuarios y sonido (con pruebas)
   utilidades/       Formato de horas y fechas
   App.tsx           Rutas de cada pantalla
   main.tsx          Punto de entrada

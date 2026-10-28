@@ -330,3 +330,285 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* #42: tarjeta del paciente y acciones a la izquierda, tabla de pacientes en espera a la derecha */
+.prof__grilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(16px, 2.34vw, 24px);
+  align-items: start;
+}
+
+.prof__columna {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.34vw, 24px);
+}
+
+@media (min-width: 1024px) {
+  .prof__grilla {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+
+.prof__secundarias {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.prof__alerta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-card);
+  background: #fef9e8;
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.prof__alerta svg {
+  flex-shrink: 0;
+}
+
+/* Tabla de pacientes en espera */
+.prof__lista {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.prof__lista-encabezado {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.prof__lista-encabezado h2 {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: clamp(18px, 2vw, 20px);
+}
+
+.prof__lista-encabezado span,
+.prof__lista-vacia {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+}
+
+.prof__lista-vacia {
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+}
+
+.prof__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+.prof__tabla th {
+  padding: var(--space-3) var(--space-2);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-soft);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.prof__tabla td {
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border-soft);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.prof__tabla th:first-child,
+.prof__tabla td:first-child {
+  padding-left: var(--space-4);
+}
+
+.prof__tabla th:last-child,
+.prof__tabla td:last-child {
+  padding-right: var(--space-4);
+}
+
+.prof__tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.prof__tabla-numero {
+  color: var(--color-secondary);
+  font-weight: 700;
+}
+
+.prof__tabla .espera,
+.prof__tabla-paciente {
+  white-space: nowrap;
+}
+
+.prof__fila--proxima td {
+  background: #f3f8fd;
+}
+
+/* DEV-38: la fila elegida con el teclado se ve con borde y fondo, no solo con color */
+.prof__fila:focus-visible {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: -3px;
+  box-shadow: none;
+}
+
+.prof__fila:focus-visible td {
+  background: #eaf3fb;
+}
+
+.prof__tabla-accion {
+  text-align: right;
+}
+
+.btn.prof__llamar {
+  width: auto;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  font-size: 16px;
+  gap: var(--space-2);
+}
+
+/* Tablet: el botón "Llamar" queda solo con texto para que la tabla entre completa */
+@media (min-width: 641px) and (max-width: 1279px) {
+  .btn.prof__llamar svg {
+    display: none;
+  }
+}
+
+/* DEV-38: teclas de los atajos */
+.tecla {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8em;
+  padding: 0.1em 0.45em;
+  border: 1px solid var(--color-border);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-secondary);
+  font-family: inherit;
+  font-size: 0.6em;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.btn--primary .tecla {
+  margin-left: var(--space-2);
+  border-color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  color: #fff;
+}
+
+.btn--secondary .tecla {
+  margin-left: var(--space-2);
+}
+
+.btn:disabled .tecla {
+  opacity: 0.6;
+}
+
+.prof__atajos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  border: 1px dashed var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.prof__atajos span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.prof__atajos .tecla {
+  font-size: 13px;
+}
+
+.prof__atajos-titulo {
+  color: var(--color-secondary);
+  font-weight: 700;
+}
+
+.prof__atajos-nota {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.prof__modal-texto {
+  margin-top: var(--space-4);
+  color: var(--color-text);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/* Celular: la tabla pasa a tarjetas */
+@media (max-width: 640px) {
+  .prof__tabla thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .prof__tabla,
+  .prof__tabla tbody,
+  .prof__tabla tr,
+  .prof__tabla td {
+    display: block;
+  }
+
+  .prof__tabla tr {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .prof__tabla td,
+  .prof__tabla td:first-child,
+  .prof__tabla td:last-child {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-1) 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .prof__tabla td[data-label]::before {
+    content: attr(data-label);
+    color: var(--color-text-secondary);
+    font-size: 14px;
+  }
+
+  .prof__tabla-accion {
+    padding-top: var(--space-2) !important;
+  }
+
+  .btn.prof__llamar {
+    width: 100%;
+  }
+
+  .prof__atajos {
+    display: none;
+  }
+}

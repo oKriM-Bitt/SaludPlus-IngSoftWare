@@ -9,6 +9,7 @@
  */
 import { evaluarTolerancia, TOLERANCIA_MINUTOS } from './tolerancia';
 import { estimarEspera, MINUTOS_POR_CONSULTA } from './espera';
+import { pacientesSaltados } from './llamados';
 
 export { MINUTOS_POR_CONSULTA };
 
@@ -24,6 +25,11 @@ export const profesionalPorConsultorio = (consultorio: string) =>
   PROFESIONALES.find((p) => p.consultorio === consultorio) ?? PROFESIONALES[0];
 
 const profesionalPorNombre = (nombre: string) => PROFESIONALES.find((p) => p.nombre === nombre) ?? PROFESIONALES[0];
+
+/** #43: servicios o especialidades que atiende el centro (se derivan de los profesionales). */
+export const SERVICIOS: string[] = [...new Set(PROFESIONALES.map((p) => p.especialidad))];
+
+export const profesionalesDelServicio = (servicio: string) => PROFESIONALES.filter((p) => p.especialidad === servicio);
 
 export type Turno = {
   id: string;
@@ -56,12 +62,26 @@ export type Admision = {
   contraturnoDe?: string; // turnoId de la admisión cancelada que origina el contraturno
   contraturnoAsignado?: string; // número del contraturno ya asignado
   motivo?: string;
+  servicio?: string; // #43: servicio elegido en el tótem o especialidad del profesional
+  documento?: string; // DEV-33: DNI ficticio de la demanda espontánea, solo para evitar duplicados; nunca se muestra
 };
+
+/** DEV-33: una demanda espontánea del tótem queda sin profesional hasta que la secretaría lo asigna. */
+export const sinProfesional = (a: Admision) => !a.profesional;
 
 export type ResultadoBusqueda =
   | { tipo: 'encontrado'; turno: Turno }
   | { tipo: 'no-encontrado' }
   | { tipo: 'tolerancia-vencida'; turno: Turno; admision: Admision }
+  | { tipo: 'ya-registrado'; admision: Admision }
+  | { tipo: 'otro-servicio'; turno: Turno }; // #43: el turno es de otro servicio que el elegido en el tótem
+
+/** DEV-33: resultado de identificar en el tótem a un paciente que dice no tener turno. */
+export type ResultadoSinTurno =
+  | { tipo: 'identificado'; paciente: string }
+  | { tipo: 'no-encontrado' }
+  | { tipo: 'tiene-turno'; turno: Turno } // tiene un turno hoy: debe seguir el camino "Tengo turno"
+  | { tipo: 'turno-vencido' } // su turno de hoy venció: la secretaría ofrece contraturno
   | { tipo: 'ya-registrado'; admision: Admision };
 
 export type ColaConsultorio = {
@@ -93,6 +113,22 @@ export class ConsultaError extends Error {
   constructor() {
     super('No se pudo consultar la cola');
     this.name = 'ConsultaError';
+  }
+}
+
+/** #42: hay un paciente en atención; hay que finalizarlo antes de llamar a otro. */
+export class PacienteEnAtencionError extends Error {
+  constructor(public enAtencion: Admision) {
+    super('Hay un paciente en atención');
+    this.name = 'PacienteEnAtencionError';
+  }
+}
+
+/** #42: el paciente elegido ya no está en espera (lo llamó otro equipo o cambió su estado). */
+export class PacienteNoDisponibleError extends Error {
+  constructor() {
+    super('El paciente ya no está en espera');
+    this.name = 'PacienteNoDisponibleError';
   }
 }
 
@@ -142,6 +178,18 @@ function admisionesIniciales(): Record<string, Admision> {
     'h-3': a('h-3', 'A016', 'Inés C.', '4', -45, -50, { estado: 'finalizado', llamadoEn: minutosDesdeAhora(-18).toISOString() }),
     'h-4': a('h-4', 'A017', 'Raquel N.', '2', -30, -35, { estado: 'finalizado', llamadoEn: minutosDesdeAhora(-8).toISOString() }),
   };
+}
+
+/**
+ * DEV-33: padrón SIMULADO de afiliados para identificar a quien llega sin turno.
+ * Incluye a los pacientes con turno y dos afiliados sin turno hoy. Datos ficticios.
+ */
+function padron(): { documento: string; paciente: string }[] {
+  return [
+    ...turnosDelDia().map((t) => ({ documento: t.documento, paciente: t.paciente })),
+    { documento: '27123456', paciente: 'Elena T.' },
+    { documento: '31555666', paciente: 'Pablo Q.' },
+  ];
 }
 
 /** El turno t-4 falla en el primer intento de registro (pantalla K09); al reintentar, funciona. */
@@ -219,7 +267,11 @@ const nuevaAdmision = (turno: Turno, estado: EstadoAdmision, extra: Partial<Admi
 
 // ---------- Tótem y registro de llegada ----------
 
-export async function buscarTurno(identificador: string, ahora = new Date()): Promise<ResultadoBusqueda> {
+/**
+ * Busca el turno del día. Si se indica el servicio elegido en el tótem (#43), también
+ * controla que el turno sea de ese servicio antes de aplicar la tolerancia.
+ */
+export async function buscarTurno(identificador: string, ahora = new Date(), servicio?: string): Promise<ResultadoBusqueda> {
   verificarConexion();
   await esperar(600);
   const turno = turnosDelDia().find((t) => t.documento === identificador || t.afiliado === identificador);
@@ -228,6 +280,7 @@ export async function buscarTurno(identificador: string, ahora = new Date()): Pr
   const existente = leerAdmisiones()[turno.id];
   if (existente?.estado === 'cancelado-tolerancia') return { tipo: 'tolerancia-vencida', turno, admision: existente };
   if (existente) return { tipo: 'ya-registrado', admision: existente };
+  if (servicio && turno.especialidad !== servicio) return { tipo: 'otro-servicio', turno };
 
   if (evaluarTolerancia(turno.horario, ahora) === 'vencida') {
     // RF-07: el turno queda cancelado y la secretaría lo ve para ofrecer un contraturno.
@@ -247,6 +300,65 @@ export async function registrarLlegada(turno: Turno): Promise<Admision> {
   if (existente) return existente; // registrar dos veces no duplica la admisión
 
   const admision = nuevaAdmision(turno, 'en-espera');
+  guardarAdmision(admision);
+  return admision;
+}
+
+// ---------- Tótem: demanda espontánea (DEV-33) ----------
+
+const activa = (a: Admision) => a.estado === 'en-espera' || a.estado === 'llamado';
+
+/** Admisión vigente de un documento: su turno ya registrado o una demanda espontánea en curso. */
+function admisionActivaDe(documento: string): Admision | undefined {
+  const registradas = leerAdmisiones();
+  const turno = turnosDelDia().find((t) => t.documento === documento);
+  const delTurno = turno ? registradas[turno.id] : undefined;
+  if (delTurno && activa(delTurno)) return delTurno;
+  return Object.values(registradas).find((a) => a.tipo === 'demanda' && a.documento === documento && activa(a));
+}
+
+/** Identifica con DNI a quien dice no tener turno. No registra nada todavía. */
+export async function identificarSinTurno(documento: string, ahora = new Date()): Promise<ResultadoSinTurno> {
+  verificarConexion();
+  await esperar(600);
+  const yaRegistrada = admisionActivaDe(documento);
+  if (yaRegistrada) return { tipo: 'ya-registrado', admision: yaRegistrada };
+
+  const turno = turnosDelDia().find((t) => t.documento === documento);
+  if (turno) {
+    const existente = leerAdmisiones()[turno.id];
+    const vencido = existente?.estado === 'cancelado-tolerancia' || evaluarTolerancia(turno.horario, ahora) === 'vencida';
+    if (vencido) return { tipo: 'turno-vencido' };
+    if (!existente) return { tipo: 'tiene-turno', turno };
+  }
+
+  const afiliado = padron().find((p) => p.documento === documento);
+  return afiliado ? { tipo: 'identificado', paciente: afiliado.paciente } : { tipo: 'no-encontrado' };
+}
+
+/**
+ * Registra como demanda espontánea a quien llega sin turno, en la cola del servicio elegido.
+ * Queda sin profesional hasta que la secretaría lo asigna. No duplica admisiones del mismo DNI.
+ */
+export async function registrarDemandaTotem(documento: string, paciente: string, servicio: string): Promise<Admision> {
+  verificarConexion();
+  await esperar(1000);
+  const existente = admisionActivaDe(documento);
+  if (existente) return existente;
+  const ahora = new Date().toISOString();
+  const admision: Admision = {
+    numero: siguienteNumero(),
+    turnoId: `d-${documento}-${Date.now()}`,
+    paciente,
+    profesional: '',
+    consultorio: '',
+    horaTurno: ahora,
+    registradaEn: ahora,
+    estado: 'en-espera',
+    tipo: 'demanda',
+    servicio,
+    documento,
+  };
   guardarAdmision(admision);
   return admision;
 }
@@ -328,16 +440,30 @@ export async function registrarDemandaEspontanea(paciente: string, profesional: 
     registradaEn: ahora,
     estado: 'en-espera',
     tipo: 'demanda',
+    servicio: p.especialidad,
   };
   guardarAdmision(admision);
   return admision;
+}
+
+/** DEV-33: la secretaría asigna profesional a una demanda espontánea del tótem. Conserva número y llegada. */
+export async function asignarProfesional(admision: Admision, profesional: string): Promise<Admision> {
+  verificarConexion();
+  await esperar(600);
+  verificarServicio();
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.estado !== 'en-espera') return actual;
+  const p = profesionalPorNombre(profesional);
+  const asignada: Admision = { ...actual, profesional: p.nombre, consultorio: p.consultorio };
+  guardarAdmision(asignada);
+  return asignada;
 }
 
 /** RF-06: demora del profesional según el paciente que más espera desde su horario. */
 export function calcularDemoras(registros: Admision[], ahora: Date): { profesional: string; consultorio: string; minutos: number }[] {
   const porProfesional = new Map<string, Admision>();
   for (const a of registros) {
-    if (a.estado !== 'en-espera') continue;
+    if (a.estado !== 'en-espera' || sinProfesional(a)) continue;
     const previo = porProfesional.get(a.profesional);
     if (!previo || a.horaTurno < previo.horaTurno) porProfesional.set(a.profesional, a);
   }
@@ -417,6 +543,70 @@ export async function llamarSiguiente(consultorio: string): Promise<Admision> {
   const llamado: Admision = { ...siguiente, estado: 'llamado', llamadoEn: new Date().toISOString(), llamados: 1 };
   guardarAdmision(llamado);
   return llamado;
+}
+
+/**
+ * #42: llama al paciente elegido en la tabla. Si no es el primero de la cola, el llamado
+ * fuera de orden queda registrado en la auditoría (quién, cuándo y a qué paciente).
+ */
+export async function llamarPaciente(consultorio: string, turnoId: string, usuario: string): Promise<Admision> {
+  verificarConexion();
+  await esperar(500);
+  const cola = await obtenerCola(consultorio);
+  if (cola.enAtencion) throw new PacienteEnAtencionError(cola.enAtencion);
+  const elegido = cola.enEspera.find((a) => a.turnoId === turnoId);
+  if (!elegido) throw new PacienteNoDisponibleError();
+  const saltados = pacientesSaltados(cola.enEspera, turnoId);
+  const ahora = new Date().toISOString();
+  const llamado: Admision = { ...elegido, estado: 'llamado', llamadoEn: ahora, llamados: 1 };
+  guardarAdmision(llamado);
+  if (saltados.length > 0) {
+    registrarAuditoria({
+      accion: 'llamado-fuera-de-orden',
+      usuario,
+      fecha: ahora,
+      consultorio,
+      numero: llamado.numero,
+      turnoId: llamado.turnoId,
+      saltados: saltados.map((a) => a.numero),
+    });
+  }
+  return llamado;
+}
+
+// ---------- Auditoría de llamados (RF-09) ----------
+
+export type RegistroAuditoria = {
+  accion: 'llamado-fuera-de-orden';
+  usuario: string; // quién llamó
+  fecha: string; // ISO: cuándo
+  consultorio: string;
+  numero: string; // a qué paciente (número de orden, sin datos de salud)
+  turnoId: string;
+  saltados: string[]; // números de los pacientes que estaban antes en la cola
+};
+
+const CLAVE_AUDITORIA = 'saludplus.auditoria';
+let auditoriaEnMemoria: RegistroAuditoria[] = [];
+
+/** Solo agrega registros: no hay funciones para editarlos ni borrarlos. */
+function registrarAuditoria(r: RegistroAuditoria) {
+  const registros = [...obtenerAuditoria(), r];
+  auditoriaEnMemoria = registros;
+  try {
+    localStorage.setItem(CLAVE_AUDITORIA, JSON.stringify(registros));
+  } catch {
+    /* sin almacenamiento: queda en memoria */
+  }
+}
+
+export function obtenerAuditoria(): RegistroAuditoria[] {
+  try {
+    const raw = localStorage.getItem(CLAVE_AUDITORIA);
+    return raw ? (JSON.parse(raw) as RegistroAuditoria[]) : auditoriaEnMemoria;
+  } catch {
+    return auditoriaEnMemoria;
+  }
 }
 
 /** #41: repite el llamado del paciente en atención. No cambia el orden ni crea otra admisión. */

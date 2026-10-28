@@ -247,3 +247,86 @@
     min-height: 220px;
   }
 }
+
+/* Encabezado: conexión y menú de usuario (#48) */
+.prof__header-derecha {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Contadores: pacientes esperando y mayor espera (#46) */
+.prof__contadores {
+  display: flex;
+  gap: clamp(16px, 3vw, 40px);
+  flex-shrink: 0;
+}
+
+.prof__contador .espera {
+  font-size: clamp(22px, 2.6vw, 28px);
+}
+
+.prof__contador .espera svg {
+  width: 0.9em;
+  height: 0.9em;
+}
+
+.prof__contador .espera__aviso {
+  display: none;
+}
+
+/* Acciones con paciente en atención (#41) */
+.prof__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.prof__secundarias {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.prof__secundaria {
+  min-height: 64px;
+  font-size: clamp(17px, 2vw, 22px);
+}
+
+.prof__ayuda {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.prof__confirmacion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.prof__confirmacion svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .prof__titulo {
+    flex-direction: column;
+  }
+
+  .prof__contador {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .prof__secundarias {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

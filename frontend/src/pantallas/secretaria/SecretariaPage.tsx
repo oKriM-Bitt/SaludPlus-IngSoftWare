@@ -4,6 +4,8 @@ import { Icon } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import { StatusChip, type EstadoTurno } from '../../componentes/StatusChip';
+import { MenuUsuario } from '../../componentes/MenuUsuario';
+import { TiempoEspera } from '../../componentes/TiempoEspera';
 import {
   buscarTurno,
   calcularDemoras,
@@ -25,7 +27,6 @@ import { ModalContraturno, ModalDemanda } from './Modales';
 import './secretaria.css';
 
 const CENTRO = 'Centro Villa Norte';
-const USUARIA = 'Julia Benítez · Admisión';
 const ACTUALIZAR_CADA_MS = 5_000;
 const MIN_DIGITOS = 7;
 
@@ -229,9 +230,8 @@ export function SecretariaPage() {
             Conectado
           </span>
         )}
-        <span className="sec__header-item sec__usuaria">
-          <Icon name="user" size={24} />
-          {USUARIA}
+        <span className="sec__usuaria">
+          <MenuUsuario />
         </span>
       </header>
 
@@ -380,7 +380,7 @@ export function SecretariaPage() {
                     <td data-label="Profesional">{a.profesional}</td>
                     <td data-label="Consultorio">{a.consultorio}</td>
                     <td data-label="Hora del turno">{hora(a.horaTurno)}</td>
-                    <td data-label="Minutos de espera">{esperando(a) ? `${minutosEntre(a.registradaEn, sinConexion && cola ? cola.actualizadoEn : ahora)} min` : '—'}</td>
+                    <td data-label="Minutos de espera">{esperando(a) ? <TiempoEspera minutos={minutosEntre(a.registradaEn, sinConexion && cola ? cola.actualizadoEn : ahora)} /> : '—'}</td>
                     <td data-label="Estado">
                       <StatusChip estado={estadoVisible(a)} />
                     </td>

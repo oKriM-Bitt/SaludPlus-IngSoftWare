@@ -305,3 +305,115 @@
     font-size: 88px;
   }
 }
+
+/* Sonido de los llamados (#45) */
+.sala__derecha {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(12px, 1.5vw, 32px);
+}
+
+.sala__sonido {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: #fff;
+  font-size: clamp(14px, 1.1vw, 22px);
+  cursor: pointer;
+}
+
+.sala__sonido[aria-pressed='false'] {
+  border-style: dashed;
+  color: #cbd5e1;
+}
+
+.sala__habilitar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid #fbbf24;
+  border-radius: var(--radius-card);
+  background: #fef3c7;
+  color: #78350f;
+  font-size: clamp(16px, 1.3vw, 26px);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Aviso visual del llamado: ocupa toda la pantalla unos segundos */
+.sala__aviso {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 4vmin;
+  background: rgba(11, 36, 64, 0.92);
+  animation: aviso-entra 0.35s ease-out;
+}
+
+.sala__aviso-caja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vmin;
+  width: min(1400px, 100%);
+  padding: 6vmin 4vmin;
+  border: 8px solid var(--color-accent);
+  border-radius: 24px;
+  background: var(--color-primary);
+  color: #fff;
+  text-align: center;
+  animation: aviso-pulso 1.2s ease-in-out 3;
+}
+
+.sala__aviso-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2vmin;
+  font-size: clamp(28px, 5vmin, 72px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sala__aviso-numero {
+  font-size: clamp(96px, 26vmin, 360px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sala__aviso-consultorio {
+  font-size: clamp(40px, 9vmin, 140px);
+  font-weight: 700;
+}
+
+@keyframes aviso-entra {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes aviso-pulso {
+  50% {
+    box-shadow: 0 0 0 16px rgba(13, 148, 136, 0.45);
+  }
+}
+
+@media (max-width: 480px) {
+  .sala__derecha {
+    flex-wrap: wrap;
+  }
+}

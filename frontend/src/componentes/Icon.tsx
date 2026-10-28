@@ -21,9 +21,27 @@ export type IconName =
   | 'swap'
   | 'info'
   | 'calendar-check'
-  | 'chevron-down';
+  | 'chevron-down'
+  | 'log-out'
+  | 'menu'
+  | 'volume'
+  | 'volume-off'
+  | 'lock'
+  | 'grid'
+  | 'repeat'
+  | 'monitor'
+  | 'external';
 
 const paths: Record<IconName, JSX.Element> = {
+  'log-out': <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
+  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  volume: <path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />,
+  'volume-off': <path d="M11 5 6 9H2v6h4l5 4V5zM22 9l-6 6M16 9l6 6" />,
+  lock: <path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4" />,
+  grid: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />,
+  repeat: <path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3" />,
+  monitor: <path d="M3 4h18v12H3zM8 20h8M12 16v4" />,
+  external: <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
   hand: (
     <path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
   ),

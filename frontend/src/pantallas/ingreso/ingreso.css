@@ -1,0 +1,134 @@
+/* Inicio de sesión (#47) */
+.ingreso {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5) var(--space-4);
+  background: linear-gradient(180deg, var(--color-bg) 0%, #e6eff8 100%);
+}
+
+.ingreso__card {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: 0 12px 40px rgba(11, 36, 64, 0.08);
+}
+
+.ingreso__card h1 {
+  color: var(--color-secondary);
+  font-size: clamp(24px, 4vw, 30px);
+  line-height: 1.2;
+}
+
+.ingreso__lead {
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 16px;
+}
+
+.ingreso__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ingreso__clave {
+  position: relative;
+}
+
+.ingreso__clave .input {
+  width: 100%;
+  padding-right: 96px;
+}
+
+.ingreso__ver {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ingreso__ver:hover {
+  background: #eaf3fb;
+}
+
+.ingreso__btn {
+  min-height: 56px;
+  font-size: 20px;
+}
+
+.ingreso__nota {
+  display: flex;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ingreso__nota svg {
+  flex-shrink: 0;
+  color: var(--color-info);
+}
+
+.ingreso__demo {
+  border-top: 1px solid var(--color-border-soft);
+  padding-top: var(--space-4);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.ingreso__demo summary {
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.ingreso__demo p {
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.ingreso__demo ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ingreso__usar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingreso__usar:hover {
+  background: #eaf3fb;
+}
+
+.ingreso__demo code {
+  color: var(--color-secondary);
+  font-weight: 600;
+}

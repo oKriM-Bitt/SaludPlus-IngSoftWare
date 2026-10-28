@@ -310,3 +310,153 @@
   min-height: 48px;
   font-size: 17px;
 }
+
+/* Tiempo de espera (#46): la espera larga se indica con color y con texto */
+.espera {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.espera--larga {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-control);
+  background: #fef3c7;
+  color: var(--color-warning);
+}
+
+.espera__aviso {
+  font-weight: 600;
+}
+
+/* Menú de usuario (#48) */
+.menu {
+  position: relative;
+}
+
+.menu__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu__boton:hover {
+  background: #eaf3fb;
+}
+
+.menu__quien {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.menu__quien strong {
+  font-size: 15px;
+}
+
+.menu__quien span {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.menu__panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 30;
+  width: min(320px, calc(100vw - 32px));
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px rgba(11, 36, 64, 0.18);
+}
+
+.menu__encabezado {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border-soft);
+  margin-bottom: var(--space-2);
+}
+
+.menu__encabezado span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.menu__panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font-size: 16px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menu__item:hover {
+  background: #eaf3fb;
+}
+
+.menu__item--actual {
+  background: #eaf3fb;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.menu__externo {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+}
+
+.menu__salir {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border-soft);
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
+  color: var(--color-error);
+}
+
+/* En celular el botón muestra solo los íconos y el panel ocupa el ancho */
+@media (max-width: 640px) {
+  .menu__quien {
+    display: none;
+  }
+
+  .menu__encabezado {
+    display: flex;
+  }
+
+  .menu__panel {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

@@ -3,10 +3,14 @@ import { Logo } from '../../componentes/Logo';
 import { Icon } from '../../componentes/Icon';
 import { escucharCambios, hayConexion, obtenerSala, SinConexionError, type DatosSala } from '../../servicios/turnos';
 import { hora } from '../../utilidades/fechas';
+import { audioBloqueado, guardarSonido, habilitarAudio, sonarLlamado, sonidoActivado } from '../../servicios/sonido';
 import './sala.css';
 
 const CENTRO = 'Centro Villa Norte';
 const ACTUALIZAR_CADA_MS = 4_000;
+const AVISO_MS = 8_000;
+
+type Aviso = { numero: string; consultorio: string; repetido: boolean };
 
 type Carga = 'cargando' | 'ok' | 'error' | 'sin-conexion';
 
@@ -16,19 +20,31 @@ export function SalaPage() {
   const [datos, setDatos] = useState<DatosSala | null>(null);
   const [ahora, setAhora] = useState(new Date());
   const [nuevoLlamado, setNuevoLlamado] = useState(false);
-  const ultimoNumero = useRef<string | null>(null);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+  const [sonido, setSonido] = useState(sonidoActivado);
+  const [bloqueado, setBloqueado] = useState(audioBloqueado);
+  const ultimoLlamado = useRef<string | null>(null);
+  const sonidoRef = useRef(sonido);
+  sonidoRef.current = sonido;
+  const temporizador = useRef<number>();
 
   const actualizar = useCallback(async () => {
     if (!hayConexion()) return setCarga('sin-conexion');
     try {
       const d = await obtenerSala();
-      // Destaca el número unos segundos cuando llega un llamado nuevo.
-      const numero = d.actual?.numero ?? null;
-      if (ultimoNumero.current !== null && numero && numero !== ultimoNumero.current) {
+      // #45: un llamado nuevo o repetido se destaca en grande y suena unos segundos.
+      const clave = d.actual ? `${d.actual.numero}|${d.actual.llamadoEn}` : '';
+      if (ultimoLlamado.current !== null && d.actual && clave !== ultimoLlamado.current) {
         setNuevoLlamado(true);
-        window.setTimeout(() => setNuevoLlamado(false), 6_000);
+        setAviso({ numero: d.actual.numero, consultorio: d.actual.consultorio, repetido: d.actual.llamados > 1 });
+        window.clearTimeout(temporizador.current);
+        temporizador.current = window.setTimeout(() => {
+          setNuevoLlamado(false);
+          setAviso(null);
+        }, AVISO_MS);
+        if (sonidoRef.current) setBloqueado(!sonarLlamado());
       }
-      ultimoNumero.current = numero;
+      ultimoLlamado.current = clave;
       setDatos(d);
       setCarga('ok');
     } catch (e) {
@@ -53,6 +69,21 @@ export function SalaPage() {
     };
   }, [actualizar]);
 
+  useEffect(() => () => window.clearTimeout(temporizador.current), []);
+
+  const cambiarSonido = async () => {
+    const activar = !sonido;
+    setSonido(activar);
+    guardarSonido(activar);
+    if (activar) setBloqueado(!(await habilitarAudio()));
+  };
+
+  const habilitar = async () => {
+    const ok = await habilitarAudio();
+    setBloqueado(!ok);
+    if (ok) sonarLlamado(1);
+  };
+
   const sinConexion = carga === 'sin-conexion';
   const horaDatos = datos ? hora(datos.actualizadoEn) : null;
   const mostrarDatos = carga === 'ok' && datos;
@@ -64,15 +95,29 @@ export function SalaPage() {
           <Logo size={44} />
         </span>
         <span className="sala__centro">{CENTRO} · Sala de espera</span>
-        <span className="sala__hora">{sinConexion && horaDatos ? `${horaDatos} · última actualización` : hora(ahora)}</span>
+        <span className="sala__derecha">
+          <button type="button" className="sala__sonido" aria-pressed={sonido} onClick={cambiarSonido}>
+            <Icon name={sonido ? 'volume' : 'volume-off'} size={28} />
+            {sonido ? 'Sonido activado' : 'Sonido silenciado'}
+          </button>
+          <span className="sala__hora">{sinConexion && horaDatos ? `${horaDatos} · última actualización` : hora(ahora)}</span>
+        </span>
       </header>
+
+      {sonido && bloqueado && (
+        <button type="button" className="sala__habilitar" onClick={habilitar}>
+          <Icon name="volume-off" size={32} />
+          El navegador bloqueó el sonido de los llamados. Toque aquí para habilitarlo.
+        </button>
+      )}
 
       <main className="sala__main">
         <section className={`sala__panel sala__llamado ${nuevoLlamado && mostrarDatos ? 'sala__llamado--nuevo' : ''}`} aria-live="assertive" aria-atomic="true">
           {mostrarDatos && datos.actual ? (
             <>
               <span className="sala__llamado-etiqueta">
-                <Icon name="megaphone" size={44} /> Llamando ahora
+                <Icon name={datos.actual.llamados > 1 ? 'repeat' : 'megaphone'} size={44} />{' '}
+                {datos.actual.llamados > 1 ? 'Llamando nuevamente' : 'Llamando ahora'}
               </span>
               <span className="sala__numero">{datos.actual.numero}</span>
               <span className="sala__consultorio">Consultorio {datos.actual.consultorio}</span>
@@ -141,6 +186,20 @@ export function SalaPage() {
           )}
         </section>
       </main>
+
+      {/* Aviso visual del llamado: repite lo que ya anuncia la zona aria-live del llamado. */}
+      {aviso && mostrarDatos && (
+        <div className="sala__aviso" aria-hidden="true" onClick={() => setAviso(null)}>
+          <div className="sala__aviso-caja">
+            <span className="sala__aviso-etiqueta">
+              <Icon name={aviso.repetido ? 'repeat' : 'megaphone'} size={56} />
+              {aviso.repetido ? 'Llamando nuevamente' : 'Llamando'}
+            </span>
+            <span className="sala__aviso-numero">{aviso.numero}</span>
+            <span className="sala__aviso-consultorio">Consultorio {aviso.consultorio}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,9 @@
  * compartan los datos entre pestañas del mismo navegador durante la demo.
  */
 import { evaluarTolerancia, TOLERANCIA_MINUTOS } from './tolerancia';
+import { estimarEspera, MINUTOS_POR_CONSULTA } from './espera';
+
+export { MINUTOS_POR_CONSULTA };
 
 export type Profesional = { nombre: string; especialidad: string; consultorio: string };
 
@@ -46,7 +49,9 @@ export type Admision = {
   registradaEn: string; // ISO
   estado: EstadoAdmision;
   tipo?: TipoAdmision; // por defecto 'turno'
-  llamadoEn?: string; // ISO
+  llamadoEn?: string; // ISO del último llamado
+  llamados?: number; // cantidad de veces que se llamó (#41)
+  ausenteEn?: string; // ISO: no se presentó después de los llamados
   canceladoEn?: string; // ISO
   contraturnoDe?: string; // turnoId de la admisión cancelada que origina el contraturno
   contraturnoAsignado?: string; // número del contraturno ya asignado
@@ -348,10 +353,7 @@ export function calcularDemoras(registros: Admision[], ahora: Date): { profesion
 
 // ---------- Pantalla de sala de espera ----------
 
-/** Minutos promedio por consulta usados para estimar la espera (valor a acordar con SaludPlus). */
-export const MINUTOS_POR_CONSULTA = 10;
-
-export type Llamado = { numero: string; consultorio: string; llamadoEn: string };
+export type Llamado = { numero: string; consultorio: string; llamadoEn: string; llamados: number };
 
 export type DatosSala = {
   actual: Llamado | null;
@@ -370,10 +372,13 @@ export async function obtenerSala(ahora = new Date()): Promise<DatosSala> {
   const llamados: Llamado[] = todas
     .filter((a) => a.llamadoEn)
     .sort((a, b) => b.llamadoEn!.localeCompare(a.llamadoEn!))
-    .map((a) => ({ numero: a.numero, consultorio: a.consultorio, llamadoEn: a.llamadoEn! }));
+    .map((a) => ({ numero: a.numero, consultorio: a.consultorio, llamadoEn: a.llamadoEn!, llamados: a.llamados ?? 1 }));
   const esperas = PROFESIONALES.map((p) => ({
     especialidad: p.especialidad,
-    minutos: todas.filter((a) => a.profesional === p.nombre && a.estado === 'en-espera').length * MINUTOS_POR_CONSULTA,
+    minutos: estimarEspera(
+      todas.filter((a) => a.profesional === p.nombre && a.estado === 'en-espera').length,
+      todas.some((a) => a.profesional === p.nombre && a.estado === 'llamado'),
+    ),
   }));
   const demoras = calcularDemoras(todas, ahora).map((d) => ({
     especialidad: profesionalPorNombre(d.profesional).especialidad,
@@ -409,9 +414,42 @@ export async function llamarSiguiente(consultorio: string): Promise<Admision> {
   if (cola.enAtencion) return cola.enAtencion;
   const siguiente = cola.enEspera[0];
   if (!siguiente) throw new ConsultaError();
-  const llamado: Admision = { ...siguiente, estado: 'llamado', llamadoEn: new Date().toISOString() };
+  const llamado: Admision = { ...siguiente, estado: 'llamado', llamadoEn: new Date().toISOString(), llamados: 1 };
   guardarAdmision(llamado);
   return llamado;
+}
+
+/** #41: repite el llamado del paciente en atención. No cambia el orden ni crea otra admisión. */
+export async function volverALlamar(admision: Admision): Promise<Admision> {
+  verificarConexion();
+  await esperar(400);
+  verificarServicio();
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.estado !== 'llamado') return actual;
+  const llamado: Admision = { ...actual, llamadoEn: new Date().toISOString(), llamados: (actual.llamados ?? 1) + 1 };
+  guardarAdmision(llamado);
+  return llamado;
+}
+
+/** Cantidad de llamados después de la cual el profesional puede marcar al paciente como ausente. */
+export const LLAMADOS_ANTES_DE_AUSENTE = 2;
+
+/** #41: el paciente no se presentó después de los llamados. */
+export async function marcarAusente(admision: Admision): Promise<void> {
+  verificarConexion();
+  await esperar(400);
+  verificarServicio();
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  guardarAdmision({ ...actual, estado: 'ausente', ausenteEn: new Date().toISOString() });
+}
+
+/** #46: pacientes adelante y espera estimada de una admisión en espera. */
+export function esperaDe(admision: Admision): { pacientesAntes: number; minutos: number } {
+  const delConsultorio = Object.values(leerAdmisiones()).filter((a) => a.consultorio === admision.consultorio);
+  const cola = delConsultorio.filter((a) => a.estado === 'en-espera').sort(ordenarCola);
+  const posicion = cola.findIndex((a) => a.turnoId === admision.turnoId);
+  const pacientesAntes = posicion === -1 ? cola.length : posicion;
+  return { pacientesAntes, minutos: estimarEspera(pacientesAntes, delConsultorio.some((a) => a.estado === 'llamado')) };
 }
 
 export async function finalizarAtencion(admision: Admision): Promise<void> {

@@ -7,6 +7,7 @@ import { StatusChip, type EstadoTurno } from '../../componentes/StatusChip';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
 import {
+  asignarProfesional,
   buscarTurno,
   calcularDemoras,
   escucharCambios,
@@ -18,12 +19,13 @@ import {
   registrarDemandaEspontanea,
   registrarLlegada,
   SinConexionError,
+  sinProfesional,
   type Admision,
   type ColaCentro,
 } from '../../servicios/turnos';
 import { TOLERANCIA_MINUTOS } from '../../servicios/tolerancia';
 import { fechaLarga, hora, minutosEntre } from '../../utilidades/fechas';
-import { ModalContraturno, ModalDemanda } from './Modales';
+import { ModalAsignar, ModalContraturno, ModalDemanda } from './Modales';
 import './secretaria.css';
 
 const CENTRO = 'Centro Villa Norte';
@@ -32,7 +34,10 @@ const MIN_DIGITOS = 7;
 
 type Carga = 'cargando' | 'ok' | 'error' | 'sin-conexion';
 type Aviso = { tono: 'success' | 'info' | 'warning' | 'error'; titulo: string; texto?: string; contraturnoPara?: Admision };
-type ModalAbierto = null | { tipo: 'contraturno'; admision?: Admision } | { tipo: 'demanda' };
+type ModalAbierto = null | { tipo: 'contraturno'; admision?: Admision } | { tipo: 'demanda' } | { tipo: 'asignar'; admision: Admision };
+
+/** Valor del filtro de profesional para las demandas espontáneas del tótem todavía sin asignar (DEV-33). */
+const SIN_ASIGNAR = '__sin-asignar__';
 
 const ESTADOS: { valor: EstadoTurno | ''; etiqueta: string }[] = [
   { valor: '', etiqueta: 'Todos los estados' },
@@ -114,12 +119,13 @@ export function SecretariaPage() {
   const filas = useMemo(
     () =>
       registros
-        .filter((a) => !filtroProfesional || a.profesional === filtroProfesional)
+        .filter((a) => !filtroProfesional || (filtroProfesional === SIN_ASIGNAR ? sinProfesional(a) : a.profesional === filtroProfesional))
         .filter((a) => !filtroEstado || estadoVisible(a) === filtroEstado)
         .sort(ordenarFilas),
     [registros, filtroProfesional, filtroEstado],
   );
   const enEspera = registros.filter(esperando).length;
+  const demandasSinAsignar = registros.filter((a) => esperando(a) && sinProfesional(a));
   const canceladasSinContraturno = registros.filter((a) => a.estado === 'cancelado-tolerancia' && !a.contraturnoAsignado);
   const demoras = carga === 'ok' ? calcularDemoras(registros, ahora) : [];
 
@@ -211,6 +217,16 @@ export function SecretariaPage() {
     });
   };
 
+  const confirmarAsignacion = async (admision: Admision, profesional: string) => {
+    await conBloqueo(async () => {
+      const asignada = await asignarProfesional(admision, profesional);
+      aplicarLocal([asignada]);
+      setModal(null);
+      setResaltado(asignada.numero);
+      setMensaje({ tono: 'success', titulo: `Profesional asignado · ${asignada.numero}`, texto: `${asignada.paciente} · ${asignada.profesional} · Consultorio ${asignada.consultorio}` });
+    });
+  };
+
   return (
     <div className="sec">
       <header className="sec__header">
@@ -297,6 +313,7 @@ export function SecretariaPage() {
             <label htmlFor="sec-profesional">Profesional</label>
             <select id="sec-profesional" className="select" value={filtroProfesional} onChange={(e) => setFiltroProfesional(e.target.value)}>
               <option value="">Todos los profesionales</option>
+              <option value={SIN_ASIGNAR}>Sin asignar (demanda espontánea)</option>
               {PROFESIONALES.map((p) => (
                 <option key={p.nombre} value={p.nombre}>
                   {p.nombre}
@@ -338,6 +355,22 @@ export function SecretariaPage() {
           <Alerta tono={mensaje.tono} titulo={mensaje.titulo}>
             {mensaje.texto}
           </Alerta>
+        ) : demandasSinAsignar.length > 0 ? (
+          <Alerta
+            tono="warning"
+            titulo={
+              demandasSinAsignar.length === 1
+                ? `Demanda espontánea sin profesional · ${demandasSinAsignar[0].numero}`
+                : `${demandasSinAsignar.length} demandas espontáneas sin profesional`
+            }
+            accion={
+              <button type="button" className="sec__link" onClick={() => setModal({ tipo: 'asignar', admision: demandasSinAsignar[0] })}>
+                Asignar profesional
+              </button>
+            }
+          >
+            {demandasSinAsignar[0].paciente} se anotó en el tótem para {demandasSinAsignar[0].servicio ?? 'atención sin turno'}.
+          </Alerta>
         ) : demoras.length > 0 ? (
           <Alerta tono="warning" titulo={`${demoras[0].profesional} · ${demoras[0].minutos} minutos de demora`}>
             Consultorio {demoras[0].consultorio} · informe a los pacientes que esperan atención.
@@ -377,9 +410,22 @@ export function SecretariaPage() {
                   <tr key={a.turnoId} className={a.numero === resaltado ? 'sec__fila--resaltada' : ''}>
                     <td data-label="Número" className="sec__numero">{a.numero}</td>
                     <td data-label="Paciente">{a.paciente}</td>
-                    <td data-label="Profesional">{a.profesional}</td>
-                    <td data-label="Consultorio">{a.consultorio}</td>
-                    <td data-label="Hora del turno">{hora(a.horaTurno)}</td>
+                    <td data-label="Profesional">
+                      {sinProfesional(a) ? (
+                        <span className="sec__sin-asignar">
+                          <span>Sin asignar · {a.servicio ?? 'Demanda espontánea'}</span>
+                          {esperando(a) && operativo && (
+                            <button type="button" className="sec__link" onClick={() => setModal({ tipo: 'asignar', admision: a })}>
+                              Asignar profesional
+                            </button>
+                          )}
+                        </span>
+                      ) : (
+                        a.profesional
+                      )}
+                    </td>
+                    <td data-label="Consultorio">{a.consultorio || '—'}</td>
+                    <td data-label="Hora del turno">{a.tipo === 'demanda' ? 'Sin turno' : hora(a.horaTurno)}</td>
                     <td data-label="Minutos de espera">{esperando(a) ? <TiempoEspera minutos={minutosEntre(a.registradaEn, sinConexion && cola ? cola.actualizadoEn : ahora)} /> : '—'}</td>
                     <td data-label="Estado">
                       <StatusChip estado={estadoVisible(a)} />
@@ -449,6 +495,7 @@ export function SecretariaPage() {
         />
       )}
       {modal?.tipo === 'demanda' && <ModalDemanda onCerrar={() => setModal(null)} onConfirmar={confirmarDemanda} />}
+      {modal?.tipo === 'asignar' && <ModalAsignar admision={modal.admision} onCerrar={() => setModal(null)} onConfirmar={confirmarAsignacion} />}
     </div>
   );
 }

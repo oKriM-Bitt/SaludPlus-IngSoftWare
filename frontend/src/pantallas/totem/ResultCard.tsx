@@ -1,9 +1,26 @@
 import { StatusChip } from '../../componentes/StatusChip';
 import { Icon } from '../../componentes/Icon';
-import { esperaDe, type Admision } from '../../servicios/turnos';
+import { esperaDe, sinProfesional, type Admision } from '../../servicios/turnos';
 import { textoEspera } from '../../servicios/espera';
 
 export function ResultCard({ admision }: { admision: Admision }) {
+  // DEV-33: la demanda espontánea del tótem todavía no tiene consultorio ni espera estimada.
+  if (sinProfesional(admision)) {
+    return (
+      <div className="result-card">
+        <div className="result-card__top">
+          <span className="result-card__numero">{admision.numero}</span>
+          <StatusChip estado="en-espera" />
+        </div>
+        <span className="result-card__consultorio">{admision.servicio ?? 'Demanda espontánea'}</span>
+        <span className="result-card__espera">
+          <Icon name="info" size={28} />
+          <span>Sin turno previo. La secretaría le asignará un profesional.</span>
+        </span>
+      </div>
+    );
+  }
+
   // #46: espera estimada al registrar la llegada.
   const { pacientesAntes, minutos } = esperaDe(admision);
   return (

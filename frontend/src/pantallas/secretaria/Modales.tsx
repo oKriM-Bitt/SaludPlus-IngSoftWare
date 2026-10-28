@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '../../componentes/Button';
 import { StatusChip } from '../../componentes/StatusChip';
 import { Alerta } from '../../componentes/Alerta';
-import { PROFESIONALES, type Admision } from '../../servicios/turnos';
+import { PROFESIONALES, profesionalesDelServicio, type Admision } from '../../servicios/turnos';
+import { minutosEntre } from '../../utilidades/fechas';
 import { TOLERANCIA_MINUTOS } from '../../servicios/tolerancia';
 import { hora } from '../../utilidades/fechas';
 import { Modal } from './Modal';
@@ -167,6 +168,70 @@ export function ModalDemanda({ onCerrar, onConfirmar }: DemandaProps) {
           </Button>
           <Button type="submit" loading={enviando}>
             {enviando ? 'Registrando…' : 'Registrar'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+type AsignarProps = {
+  admision: Admision; // demanda espontánea del tótem sin profesional
+  onCerrar: () => void;
+  onConfirmar: (admision: Admision, profesional: string) => Promise<void>;
+};
+
+/** DEV-33: asignar profesional a una demanda espontánea registrada en el tótem. */
+export function ModalAsignar({ admision, onCerrar, onConfirmar }: AsignarProps) {
+  // Primero los profesionales del servicio que eligió el paciente.
+  const delServicio = admision.servicio ? profesionalesDelServicio(admision.servicio) : [];
+  const opciones = [...delServicio, ...PROFESIONALES.filter((p) => !delServicio.includes(p))];
+  const [profesional, setProfesional] = useState(opciones[0].nombre);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirmar = async (e: FormEvent) => {
+    e.preventDefault();
+    setEnviando(true);
+    setError(null);
+    try {
+      await onConfirmar(admision, profesional);
+    } catch {
+      setError('No se pudo asignar el profesional. Intente nuevamente.');
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <Modal titulo="Asignar profesional" subtitulo="Paciente sin turno registrado en el tótem." onCerrar={onCerrar}>
+      <form onSubmit={confirmar} noValidate>
+        <div className="modal__paciente">
+          <strong>
+            {admision.paciente} · {admision.numero}
+          </strong>
+          <StatusChip estado="en-espera" />
+          <span>
+            {admision.servicio ?? 'Demanda espontánea'} · llegó {hora(admision.registradaEn)} · espera {minutosEntre(admision.registradaEn, new Date())} min
+          </span>
+        </div>
+        <div className="campo">
+          <label htmlFor="as-profesional">Profesional</label>
+          <select id="as-profesional" className="select" value={profesional} onChange={(e) => setProfesional(e.target.value)}>
+            {opciones.map((p) => (
+              <option key={p.nombre} value={p.nombre}>
+                {p.nombre} · {p.especialidad} · Consultorio {p.consultorio}
+              </option>
+            ))}
+          </select>
+        </div>
+        {error && <p className="campo__error" role="alert">{error}</p>}
+        <p className="modal__nota">Conserva el número {admision.numero} y la hora de llegada.</p>
+        <div className="modal__acciones">
+          <Button variant="secondary" onClick={onCerrar} disabled={enviando}>
+            Volver
+          </Button>
+          <Button type="submit" loading={enviando}>
+            {enviando ? 'Asignando…' : 'Asignar'}
           </Button>
         </div>
       </form>

@@ -1,9 +1,12 @@
-const pasos = ['Ingreso', 'Confirmación', 'Resultado'];
+// #43: se agregó el paso "Servicio" antes del ingreso del número.
+const pasos = ['Servicio', 'Ingreso', 'Confirmación', 'Resultado'];
 
-/** actual: 1, 2 o 3. Los pasos anteriores al actual quedan completos. */
-export function Stepper({ actual }: { actual: 1 | 2 | 3 }) {
+export type PasoStepper = 1 | 2 | 3 | 4;
+
+/** actual: del 1 al 4. Los pasos anteriores al actual quedan completos. */
+export function Stepper({ actual }: { actual: PasoStepper }) {
   return (
-    <ol className="stepper" aria-label={`Paso ${actual} de 3`}>
+    <ol className="stepper" aria-label={`Paso ${actual} de ${pasos.length}`}>
       {pasos.map((nombre, i) => {
         const n = i + 1;
         const estado = n < actual ? 'completo' : n === actual ? 'actual' : 'pendiente';

@@ -460,3 +460,149 @@
     width: auto;
   }
 }
+
+/* Estados agregados en #64 y #69 */
+.chip--se-retiro {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.chip--no-atendido {
+  background: var(--color-disabled-bg);
+  color: var(--color-text-secondary);
+}
+
+.chip--reprogramado {
+  background: #eef4ff;
+  color: var(--color-info);
+}
+
+/* Menú: grupos de opciones (#56, #79) */
+.menu__grupo {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.menu__grupo-titulo {
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.menu__panel {
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+}
+
+/* Formulario de contraseña (#79) */
+.form-clave {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-clave .input {
+  width: 100%;
+  min-height: 52px;
+}
+
+.form-clave__reglas {
+  margin: calc(var(--space-2) * -1) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.form-clave__reglas li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.form-clave__regla--ok {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.form-clave__ver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.form-clave__ver input {
+  width: 20px;
+  height: 20px;
+}
+
+.form-clave__btn {
+  min-height: 56px;
+  font-size: 19px;
+}
+
+/* Opciones dentro de los modales */
+.modal__opciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.modal__opciones legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.modal__opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.modal__opcion input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Botón con aspecto de enlace, para acciones secundarias dentro de un texto */
+.link-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-boton:disabled {
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.link-boton--peligro {
+  color: var(--color-error);
+}

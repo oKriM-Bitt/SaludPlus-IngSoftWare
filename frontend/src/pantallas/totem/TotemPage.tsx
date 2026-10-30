@@ -4,21 +4,26 @@ import { Icon, type IconName } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import {
   buscarTurno,
+  elegirTurno,
   identificarSinTurno,
   registrarDemandaTotem,
   registrarLlegada,
   SERVICIOS,
   SinConexionError,
   type Admision,
+  type ResultadoBusqueda,
   type Turno,
 } from '../../servicios/turnos';
+import { sucursalDelEquipo } from '../../servicios/contexto';
+import { nombreSucursal } from '../../servicios/configuracion';
+import { TOLERANCIA_MINUTOS } from '../../servicios/tolerancia';
+import { hora } from '../../utilidades/fechas';
 import { Stepper, type PasoStepper } from './Stepper';
 import { Keypad } from './Keypad';
 import { TurnoDetalle } from './TurnoDetalle';
 import { ResultCard } from './ResultCard';
 import './totem.css';
 
-const CENTRO = 'Centro Villa Norte';
 const MAX_DIGITOS = 11;
 const MIN_DIGITOS = 7;
 const INACTIVIDAD_MS = 45_000;
@@ -41,7 +46,12 @@ type Paso =
   | { id: 'K06-tolerancia' }
   | { id: 'K07-ya-registrada'; admision: Admision }
   | { id: 'K09-error'; turno?: Turno; paciente?: string }
-  | { id: 'K10-sin-conexion' };
+  | { id: 'K10-sin-conexion' }
+  | { id: 'K16-anio' } // #54: el número coincide con más de una persona
+  | { id: 'K17-varios-turnos'; turnos: Turno[]; registrados: Admision[] } // #54
+  | { id: 'K18-otra-sucursal'; turno: Turno; sucursal: string } // #56
+  | { id: 'K19-muy-temprano'; turno: Turno; desde: Date } // #75
+  | { id: 'K20-dia-cerrado' }; // #69
 
 const pasoDelStepper: Record<Paso['id'], PasoStepper | null> = {
   'K01-bienvenida': null,
@@ -59,6 +69,11 @@ const pasoDelStepper: Record<Paso['id'], PasoStepper | null> = {
   'K07-ya-registrada': 4,
   'K09-error': 4,
   'K10-sin-conexion': 4,
+  'K16-anio': 2,
+  'K17-varios-turnos': 3,
+  'K18-otra-sucursal': 4,
+  'K19-muy-temprano': 4,
+  'K20-dia-cerrado': 4,
 };
 
 /** Pantallas en las que el tótem espera una respuesta: no vuelve solo al inicio. */
@@ -69,6 +84,8 @@ export function TotemPage() {
   const [modalidad, setModalidad] = useState<Modalidad>('con-turno');
   const [servicio, setServicio] = useState<string | null>(null);
   const [numero, setNumero] = useState('');
+  const [anio, setAnio] = useState('');
+  const centro = nombreSucursal(sucursalDelEquipo());
   const [errorCampo, setErrorCampo] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
   const tituloRef = useRef<HTMLHeadingElement>(null);
@@ -76,6 +93,7 @@ export function TotemPage() {
   // Al volver al inicio se borran todos los datos: el próximo paciente no ve nada del anterior.
   const reiniciar = useCallback(() => {
     setNumero('');
+    setAnio('');
     setErrorCampo(null);
     setBuscando(false);
     setServicio(null);
@@ -122,13 +140,48 @@ export function TotemPage() {
   };
 
   /** Busca el turno y decide la pantalla. Sin servicio, no controla que coincida (paciente que confirma su turno). */
-  const buscarConTurno = async (servicioElegido: string | undefined) => {
-    const r = await buscarTurno(numero, new Date(), servicioElegido);
+  const buscarConTurno = async (servicioElegido: string | undefined, anioNacimiento?: string) => {
+    mostrarResultado(await buscarTurno(numero, new Date(), servicioElegido, anioNacimiento));
+  };
+
+  const mostrarResultado = (r: ResultadoBusqueda) => {
     if (r.tipo === 'encontrado') setPaso({ id: 'K03-confirmacion', turno: r.turno });
     else if (r.tipo === 'otro-servicio') setPaso({ id: 'K12-otro-servicio', turno: r.turno });
     else if (r.tipo === 'no-encontrado') setPaso({ id: 'K05-no-encontrado' });
     else if (r.tipo === 'tolerancia-vencida') setPaso({ id: 'K06-tolerancia' });
+    else if (r.tipo === 'varias-personas') {
+      setAnio('');
+      setPaso({ id: 'K16-anio' });
+    } else if (r.tipo === 'varios-turnos') setPaso({ id: 'K17-varios-turnos', turnos: r.turnos, registrados: r.registrados });
+    else if (r.tipo === 'otra-sucursal') setPaso({ id: 'K18-otra-sucursal', turno: r.turno, sucursal: r.sucursal });
+    else if (r.tipo === 'muy-temprano') setPaso({ id: 'K19-muy-temprano', turno: r.turno, desde: r.desde });
+    else if (r.tipo === 'dia-cerrado') setPaso({ id: 'K20-dia-cerrado' });
     else setPaso({ id: 'K07-ya-registrada', admision: r.admision });
+  };
+
+  /** #54: el paciente confirmó su año de nacimiento. */
+  const continuarConAnio = async () => {
+    if (anio.length !== 4) return setErrorCampo('Ingrese los 4 números del año, por ejemplo 1980.');
+    setBuscando(true);
+    try {
+      await buscarConTurno(servicio ?? undefined, anio);
+    } catch (e) {
+      setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : { id: 'K05-no-encontrado' });
+    } finally {
+      setBuscando(false);
+    }
+  };
+
+  /** #54: el paciente eligió uno de sus turnos del día. */
+  const elegir = async (turno: Turno) => {
+    setBuscando(true);
+    try {
+      mostrarResultado(await elegirTurno(turno));
+    } catch (e) {
+      setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : { id: 'K05-no-encontrado' });
+    } finally {
+      setBuscando(false);
+    }
   };
 
   const buscarSinTurno = async () => {
@@ -137,6 +190,7 @@ export function TotemPage() {
     else if (r.tipo === 'tiene-turno') setPaso({ id: 'K15-tiene-turno', turno: r.turno });
     else if (r.tipo === 'turno-vencido') setPaso({ id: 'K06-tolerancia' });
     else if (r.tipo === 'ya-registrado') setPaso({ id: 'K07-ya-registrada', admision: r.admision });
+    else if (r.tipo === 'dia-cerrado') setPaso({ id: 'K20-dia-cerrado' });
     else setPaso({ id: 'K05-no-encontrado' });
   };
 
@@ -173,7 +227,7 @@ export function TotemPage() {
       const admision = await registrarLlegada(turno);
       setPaso({ id: 'K04-registrada', admision });
     } catch (e) {
-      setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : { id: 'K09-error', turno });
+      setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : e instanceof Error && e.name === 'DiaCerradoError' ? { id: 'K20-dia-cerrado' } : { id: 'K09-error', turno });
     }
   };
 
@@ -194,7 +248,7 @@ export function TotemPage() {
     <div className="totem">
       <header className="totem__header">
         <Logo size={48} />
-        <span className="totem__centro">{CENTRO}</span>
+        <span className="totem__centro">{centro}</span>
       </header>
 
       <main className="totem__main">
@@ -469,7 +523,7 @@ export function TotemPage() {
         return (
           <Resultado tituloRef={tituloRef} icon="alert-triangle" tono="warning" titulo="Tolerancia vencida">
             <p className="totem__lead totem__lead--dark">
-              Su turno fue cancelado porque pasaron más de 15 minutos del horario. Acérquese a secretaría para que le
+              Su turno fue cancelado porque pasaron más de {TOLERANCIA_MINUTOS} minutos del horario. Acérquese a secretaría para que le
               asignen un contraturno.
             </p>
             <Button onClick={reiniciar}>Volver al inicio</Button>
@@ -489,6 +543,120 @@ export function TotemPage() {
           </Resultado>
         );
       }
+
+      case 'K16-anio':
+        return (
+          <section className="totem__form">
+            <h1 ref={tituloRef} tabIndex={-1} className="totem__title">
+              Confirme quién es
+            </h1>
+            <p className="totem__subtitle">Ese número corresponde a más de una persona. Ingrese su año de nacimiento.</p>
+            <label htmlFor="anio" className="totem__label">
+              Año de nacimiento
+            </label>
+            <input
+              id="anio"
+              className={`totem__input ${errorCampo ? 'totem__input--error' : ''}`}
+              value={anio}
+              placeholder="Por ejemplo, 1980"
+              inputMode="none"
+              autoComplete="off"
+              aria-invalid={!!errorCampo}
+              aria-describedby={errorCampo ? 'anio-error' : undefined}
+              onChange={(e) => {
+                setErrorCampo(null);
+                setAnio(e.target.value.replace(/\D/g, '').slice(0, 4));
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && continuarConAnio()}
+            />
+            {errorCampo && (
+              <p id="anio-error" className="totem__field-error" role="alert">
+                {errorCampo}
+              </p>
+            )}
+            <Keypad
+              onDigit={(d) => {
+                setErrorCampo(null);
+                setAnio((a) => (a.length < 4 ? a + d : a));
+              }}
+              onClear={() => setAnio('')}
+              onBackspace={() => setAnio((a) => a.slice(0, -1))}
+            />
+            <div className="totem__actions">
+              <Button loading={buscando} onClick={continuarConAnio}>
+                {buscando ? 'Buscando su turno…' : 'Continuar'}
+              </Button>
+              <Button variant="secondary" disabled={buscando} onClick={() => setPaso({ id: 'K02-ingreso' })}>
+                Volver
+              </Button>
+            </div>
+          </section>
+        );
+
+      case 'K17-varios-turnos':
+        return (
+          <section className="totem__form">
+            <h1 ref={tituloRef} tabIndex={-1} className="totem__title">
+              {paso.registrados.length > 0 && paso.turnos.length === 1 ? 'Tiene otro turno hoy' : 'Tiene más de un turno hoy'}
+            </h1>
+            <p className="totem__subtitle">
+              {paso.registrados.length > 0 && paso.turnos.length === 1
+                ? 'Ya registró su llegada a un turno. Toque el otro solo si también llegó para ese.'
+                : 'Elija el turno al que llegó ahora. El otro queda pendiente para más tarde.'}
+            </p>
+            <div className="totem__servicios" role="group" aria-label="Sus turnos de hoy">
+              {paso.turnos.map((t) => (
+                <button key={t.id} type="button" className="totem__servicio totem__turno-opcion" disabled={buscando} onClick={() => elegir(t)}>
+                  <span>
+                    <strong>{hora(t.horario)} · {t.especialidad}</strong>
+                    <small>
+                      {t.profesional} · Consultorio {t.consultorio}
+                    </small>
+                  </span>
+                  <Icon name="arrow-right" size={32} />
+                </button>
+              ))}
+            </div>
+            {paso.registrados.length > 0 && (
+              <p className="totem__small">Ya registró su llegada a: {paso.registrados.map((a) => `${a.numero} (${a.servicio ?? 'turno'})`).join(', ')}.</p>
+            )}
+            <div className="totem__actions">
+              <Button variant="secondary" disabled={buscando} onClick={() => setPaso({ id: 'K02-ingreso' })}>
+                Volver
+              </Button>
+            </div>
+          </section>
+        );
+
+      case 'K18-otra-sucursal':
+        return (
+          <Resultado tituloRef={tituloRef} icon="building" tono="warning" titulo="Su turno es en otra sucursal">
+            <p className="totem__lead totem__lead--dark">
+              Su turno de hoy a las {hora(paso.turno.horario)} es en <strong>{paso.sucursal}</strong>. No registramos su llegada en {centro}.
+            </p>
+            <p className="totem__small">Si cree que es un error, consulte en secretaría.</p>
+            <Button onClick={reiniciar}>Volver al inicio</Button>
+          </Resultado>
+        );
+
+      case 'K19-muy-temprano':
+        return (
+          <Resultado tituloRef={tituloRef} icon="clock" tono="warning" titulo="Todavía es temprano">
+            <p className="totem__lead totem__lead--dark">
+              Su turno es a las <strong>{hora(paso.turno.horario)}</strong>. Puede registrar su llegada desde las <strong>{hora(paso.desde)}</strong>.
+            </p>
+            <p className="totem__small">Si necesita ayuda, acérquese a secretaría.</p>
+            <Button onClick={reiniciar}>Volver al inicio</Button>
+          </Resultado>
+        );
+
+      case 'K20-dia-cerrado':
+        return (
+          <Resultado tituloRef={tituloRef} icon="info" tono="warning" titulo="La atención de hoy terminó">
+            <p className="totem__lead totem__lead--dark">El centro ya cerró la atención del día. Acérquese a secretaría para recibir orientación.</p>
+            <Button onClick={reiniciar}>Volver al inicio</Button>
+          </Resultado>
+        );
 
       case 'K10-sin-conexion':
         return (

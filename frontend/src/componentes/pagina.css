@@ -1,0 +1,187 @@
+/* Pantallas internas: cierre, reportes, administración */
+.pagina--amplia {
+  max-width: 1280px;
+}
+
+.pagina__volver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  min-height: 44px;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.pagina__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.pagina__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.pagina__acciones .btn,
+.pagina .btn--compacto {
+  width: auto;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 16px;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  min-width: 0;
+}
+
+.tarjeta h2 {
+  color: var(--color-secondary);
+  font-size: 20px;
+}
+
+.tarjeta__ayuda {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* Indicadores */
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr));
+  gap: var(--space-3);
+}
+
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+}
+
+.indicador strong {
+  color: var(--color-secondary);
+  font-size: 30px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.indicador span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.indicador--alerta strong {
+  color: var(--color-warning);
+}
+
+.indicador--ok strong {
+  color: var(--color-success);
+}
+
+/* Tablas simples con desplazamiento propio */
+.tabla-caja {
+  position: relative; /* contiene las etiquetas ocultas de las celdas: así no agrandan la página */
+  overflow-x: auto;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.tabla th,
+.tabla td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border-soft);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabla th {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla td.num,
+.tabla th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla tfoot td {
+  background: var(--color-bg);
+  font-weight: 700;
+}
+
+.tabla .select,
+.tabla .input {
+  min-height: 44px;
+  padding-block: 0;
+}
+
+.vacio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  color: var(--color-text-secondary);
+}
+
+.confirmacion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  font-size: 16px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.confirmacion input {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+/* Reportes (#78) */
+.reportes__filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.tabla .chip {
+  padding: 2px var(--space-2);
+  font-size: 14px;
+}
+
+.tabla .admin__acciones {
+  min-width: 300px;
+}

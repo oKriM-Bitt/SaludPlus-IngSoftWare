@@ -1,6 +1,14 @@
 import { Icon, type IconName } from './Icon';
 
-export type EstadoTurno = 'en-espera' | 'llamado' | 'cancelado-tolerancia' | 'ausente' | 'contraturno';
+export type EstadoTurno =
+  | 'en-espera'
+  | 'llamado'
+  | 'cancelado-tolerancia'
+  | 'ausente'
+  | 'contraturno'
+  | 'se-retiro'
+  | 'no-atendido'
+  | 'reprogramado';
 
 const config: Record<EstadoTurno, { etiqueta: string; icono: IconName }> = {
   'en-espera': { etiqueta: 'En espera', icono: 'clock' },
@@ -8,6 +16,9 @@ const config: Record<EstadoTurno, { etiqueta: string; icono: IconName }> = {
   'cancelado-tolerancia': { etiqueta: 'Cancelado por tolerancia', icono: 'x-circle' },
   ausente: { etiqueta: 'Ausente', icono: 'user-x' },
   contraturno: { etiqueta: 'Contraturno', icono: 'swap' },
+  'se-retiro': { etiqueta: 'Se retiró', icono: 'log-out' },
+  'no-atendido': { etiqueta: 'No atendido', icono: 'x-circle' },
+  reprogramado: { etiqueta: 'Reprogramado', icono: 'calendar-check' },
 };
 
 /** Estados siempre con ícono y texto, nunca solo color. */

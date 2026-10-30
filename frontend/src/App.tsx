@@ -7,6 +7,10 @@ import { SalaPage } from './pantallas/sala/SalaPage';
 import { IngresoPage } from './pantallas/ingreso/IngresoPage';
 import { InicioPage } from './pantallas/inicio/InicioPage';
 import { RutaProtegida } from './componentes/RutaProtegida';
+import { CuentaPage } from './pantallas/cuenta/CuentaPage';
+import { CierrePage } from './pantallas/cierre/CierrePage';
+import { ReportesPage } from './pantallas/reportes/ReportesPage';
+import { AdministracionPage } from './pantallas/administracion/AdministracionPage';
 
 export function App() {
   return (
@@ -22,6 +26,10 @@ export function App() {
         <Route path="/inicio" element={<RutaProtegida><InicioPage /></RutaProtegida>} />
         <Route path="/secretaria" element={<RutaProtegida><SecretariaPage /></RutaProtegida>} />
         <Route path="/profesional" element={<RutaProtegida><ProfesionalPage /></RutaProtegida>} />
+        <Route path="/secretaria/cierre" element={<RutaProtegida><CierrePage /></RutaProtegida>} />
+        <Route path="/cuenta" element={<RutaProtegida><CuentaPage /></RutaProtegida>} />
+        <Route path="/reportes" element={<RutaProtegida><ReportesPage /></RutaProtegida>} />
+        <Route path="/administracion" element={<RutaProtegida><AdministracionPage /></RutaProtegida>} />
 
         <Route path="*" element={<Navigate to="/inicio" replace />} />
       </Routes>

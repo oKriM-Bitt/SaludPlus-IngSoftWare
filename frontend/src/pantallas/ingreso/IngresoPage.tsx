@@ -4,8 +4,10 @@ import { Logo } from '../../componentes/Logo';
 import { Icon, type IconName } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
-import { CredencialesError, iniciarSesion, INACTIVIDAD_MINUTOS, useUsuario } from '../../servicios/sesion';
-import { CLAVE_DEMO, ETIQUETA_ROL, puedeAcceder, USUARIOS_DEMO, type Usuario } from '../../servicios/usuarios';
+import { FormularioClave } from '../../componentes/FormularioClave';
+import { abrirSesion, comprobarIngreso, inactividadMinutos, usuarioActual as leerUsuarioActual, useUsuario } from '../../servicios/sesion';
+import { CLAVE_DEMO, ETIQUETA_ROL, puedeAcceder, usuariosDemo, type Usuario } from '../../servicios/usuarios';
+import { configuracion, nombreSucursal, sucursalPorId, type Rol, type UsuarioRegistrado } from '../../servicios/configuracion';
 import './ingreso.css';
 
 const BENEFICIOS: { icono: IconName; titulo: string; texto: string }[] = [
@@ -15,7 +17,11 @@ const BENEFICIOS: { icono: IconName; titulo: string; texto: string }[] = [
 ];
 
 /** Un usuario de prueba por rol para el ingreso rápido de la demo. */
-const ACCESOS_RAPIDOS = (['secretaria', 'profesional', 'direccion'] as const).map((rol) => USUARIOS_DEMO.find((u) => u.rol === rol)!);
+const accesosRapidos = () =>
+  (['secretaria', 'profesional', 'direccion'] as Rol[]).map((rol) => usuariosDemo().find((u) => u.rol === rol)).filter((u): u is UsuarioRegistrado => !!u);
+
+/** Pasos del ingreso: credenciales, cambio obligatorio de contraseña (#79) y elección de sucursal (#56). */
+type Etapa = { tipo: 'credenciales' } | { tipo: 'cambio-clave'; registrado: UsuarioRegistrado } | { tipo: 'sucursal'; registrado: UsuarioRegistrado };
 
 /** Inicio de sesión del personal (#47, rediseño #80). El tótem y la sala no lo requieren. */
 export function IngresoPage() {
@@ -27,6 +33,7 @@ export function IngresoPage() {
   const [verClave, setVerClave] = useState(false);
   const [mayusculas, setMayusculas] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [etapa, setEtapa] = useState<Etapa>({ tipo: 'credenciales' });
   const [error, setError] = useState<{ campo?: 'usuario' | 'clave'; texto: string } | null>(null);
   const campoUsuario = useRef<HTMLInputElement>(null);
   const campoClave = useRef<HTMLInputElement>(null);
@@ -38,7 +45,23 @@ export function IngresoPage() {
   const destino = (rutaVolver: string | null, u: Usuario) =>
     rutaVolver && rutaVolver.startsWith('/') && puedeAcceder(u, rutaVolver.split('?')[0]) ? rutaVolver : '/inicio';
 
-  if (usuarioActual && !enviando) return <Navigate to={destino(volver, usuarioActual)} replace />;
+  if (usuarioActual && !enviando && etapa.tipo === 'credenciales') return <Navigate to={destino(volver, usuarioActual)} replace />;
+
+  /** Abre la sesión y entra al sistema. */
+  const entrar = (r: UsuarioRegistrado, sucursal: string) => {
+    abrirSesion(r, sucursal);
+    const u = leerUsuarioActual();
+    navegar(u ? destino(volver, u) : '/inicio', { replace: true });
+  };
+
+  /** Después de validar: cambio de contraseña pendiente, elección de sucursal o ingreso directo. */
+  const continuarCon = (r: UsuarioRegistrado) => {
+    const sucursales = r.sucursales.filter((s) => sucursalPorId(s)?.activa);
+    if (r.debeCambiarClave) return setEtapa({ tipo: 'cambio-clave', registrado: r });
+    if (sucursales.length > 1) return setEtapa({ tipo: 'sucursal', registrado: r });
+    if (sucursales.length === 0) return setError({ texto: 'Su usuario no tiene una sucursal activa asignada. Consulte a dirección.' });
+    entrar(r, sucursales[0]);
+  };
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,25 +76,31 @@ export function IngresoPage() {
     setError(null);
     setEnviando(true);
     try {
-      const u = await iniciarSesion(usuario, clave);
-      navegar(destino(volver, u), { replace: true });
-    } catch (err) {
+      const r = await comprobarIngreso(usuario, clave);
+      if (r.tipo === 'ok') {
+        setEnviando(false);
+        continuarCon(r.registrado);
+        return;
+      }
       setClave('');
       campoClave.current?.focus();
       setError({
         texto:
-          err instanceof CredencialesError
-            ? 'Usuario o contraseña incorrectos. Revise los datos e intente nuevamente.'
-            : 'No pudimos iniciar sesión. Intente nuevamente en unos segundos.',
+          r.tipo === 'bloqueado'
+            ? `Usuario bloqueado por varios intentos fallidos. Intente de nuevo en ${r.minutos} minutos o pida a dirección que lo desbloquee.`
+            : r.tipo === 'inactivo'
+              ? 'Este usuario está dado de baja. Consulte a dirección.'
+              : 'Usuario o contraseña incorrectos. Revise los datos e intente nuevamente.',
       });
-    } finally {
-      setEnviando(false);
+    } catch {
+      setError({ texto: 'No pudimos iniciar sesión. Intente nuevamente en unos segundos.' });
     }
+    setEnviando(false);
   };
 
   const detectarMayusculas = (e: KeyboardEvent<HTMLInputElement>) => setMayusculas(e.getModifierState('CapsLock'));
 
-  const usarPrueba = (u: Usuario) => {
+  const usarPrueba = (u: UsuarioRegistrado) => {
     setUsuario(u.usuario);
     setClave(CLAVE_DEMO);
     setError(null);
@@ -115,9 +144,52 @@ export function IngresoPage() {
             </div>
           </div>
 
+          {etapa.tipo === 'cambio-clave' ? (
+            <>
+              <Alerta tono="info" titulo="Elija una contraseña nueva">
+                Dirección restableció su contraseña. Para continuar, cree una propia que solo usted conozca.
+              </Alerta>
+              <FormularioClave
+                usuario={etapa.registrado.usuario}
+                pedirActual={false}
+                textoBoton="Guardar y continuar"
+                onListo={() => continuarCon(configuracion().usuarios.find((u) => u.usuario === etapa.registrado.usuario)!)}
+              />
+              <button type="button" className="ingreso__volver" onClick={() => setEtapa({ tipo: 'credenciales' })}>
+                <Icon name="undo" size={20} /> Volver al ingreso
+              </button>
+            </>
+          ) : etapa.tipo === 'sucursal' ? (
+            <>
+              <div className="ingreso__sucursales-titulo">
+                <h2>¿En qué sucursal trabaja hoy?</h2>
+                <p>Hola, {etapa.registrado.nombre}. Puede cambiarla después desde el menú.</p>
+              </div>
+              <ul className="ingreso__sucursales">
+                {etapa.registrado.sucursales
+                  .filter((s) => sucursalPorId(s)?.activa)
+                  .map((s) => (
+                    <li key={s}>
+                      <button type="button" className="ingreso__sucursal" onClick={() => entrar(etapa.registrado, s)}>
+                        <Icon name="building" size={28} />
+                        <span>
+                          <strong>{nombreSucursal(s)}</strong>
+                          <span>{sucursalPorId(s)?.direccion}</span>
+                        </span>
+                        <Icon name="arrow-right" size={24} />
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+              <button type="button" className="ingreso__volver" onClick={() => setEtapa({ tipo: 'credenciales' })}>
+                <Icon name="undo" size={20} /> Volver al ingreso
+              </button>
+            </>
+          ) : (
+          <>
           {motivo === 'inactividad' && (
             <Alerta tono="info" titulo="La sesión se cerró por inactividad">
-              Pasaron {INACTIVIDAD_MINUTOS} minutos sin uso. Ingrese nuevamente.
+              Pasaron {inactividadMinutos()} minutos sin uso. Ingrese nuevamente.
             </Alerta>
           )}
           {volver && !motivo && !error && <Alerta tono="info" titulo="Inicie sesión para continuar" />}
@@ -195,12 +267,15 @@ export function IngresoPage() {
             <Button type="submit" className="ingreso__btn" icon={<Icon name="arrow-right" size={24} />} loading={enviando}>
               {enviando ? 'Ingresando…' : 'Ingresar'}
             </Button>
+            <p className="ingreso__olvido">
+              <Icon name="help-circle" size={18} /> ¿Olvidó su contraseña? Pida a dirección que la restablezca: le dará una temporal para cambiar al ingresar.
+            </p>
           </form>
 
           <section className="ingreso__prueba" aria-labelledby="ing-prueba-titulo">
             <h2 id="ing-prueba-titulo">Probar con un usuario de demostración</h2>
             <div className="ingreso__accesos">
-              {ACCESOS_RAPIDOS.map((u) => (
+              {accesosRapidos().map((u) => (
                 <button key={u.usuario} type="button" className={`ingreso__acceso ${usuario === u.usuario ? 'ingreso__acceso--activo' : ''}`} onClick={() => usarPrueba(u)}>
                   <strong>{ETIQUETA_ROL[u.rol]}</strong>
                   <span>{u.usuario}</span>
@@ -213,13 +288,13 @@ export function IngresoPage() {
                 Contraseña para todos: <code>{CLAVE_DEMO}</code>. Datos ficticios.
               </p>
               <ul>
-                {USUARIOS_DEMO.map((u) => (
+                {usuariosDemo().map((u) => (
                   <li key={u.usuario}>
                     <button type="button" className="ingreso__usar" onClick={() => usarPrueba(u)}>
                       <code>{u.usuario}</code>
                       <span>
                         {u.nombre} · {ETIQUETA_ROL[u.rol]}
-                        {u.consultorio ? ` · consultorio ${u.consultorio}` : ''}
+                        {u.sucursales.length > 1 ? ` · ${u.sucursales.length} sucursales` : ''}
                       </span>
                     </button>
                   </li>
@@ -230,8 +305,10 @@ export function IngresoPage() {
 
           <p className="ingreso__nota">
             <Icon name="info" size={20} />
-            La sesión se cierra sola después de {INACTIVIDAD_MINUTOS} minutos sin uso. El tótem y la pantalla de sala no necesitan usuario.
+            La sesión se cierra sola después de {inactividadMinutos()} minutos sin uso. El tótem y la pantalla de sala no necesitan usuario.
           </p>
+          </>
+          )}
         </div>
       </main>
     </div>

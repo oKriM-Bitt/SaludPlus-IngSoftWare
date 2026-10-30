@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claveTemporal, minutosDeBloqueo, problemaConClave, resumenClave } from './claves';
+import { claveTemporal, minutosDeBloqueo, problemaConClave, resumenClave, sha256 } from './claves';
 import { configuracionInicial } from './configuracion';
 
 describe('contraseñas (#79)', () => {
@@ -8,6 +8,13 @@ describe('contraseñas (#79)', () => {
     expect(jbenitez.claveHash).not.toContain('saludplus');
     expect(await resumenClave('jbenitez', 'saludplus')).toBe(jbenitez.claveHash);
     expect(await resumenClave('jbenitez', 'otra')).not.toBe(jbenitez.claveHash);
+  });
+  it('el cálculo propio de SHA-256 coincide con el del navegador (ingreso por IP de la red)', async () => {
+    for (const texto of ['', 'abc', 'saludplus:jbenitez:saludplus', 'x'.repeat(200)]) {
+      const datos = new TextEncoder().encode(texto);
+      const nativo = new Uint8Array(await crypto.subtle.digest('SHA-256', datos));
+      expect([...sha256(datos)]).toEqual([...nativo]);
+    }
   });
   it('el mismo texto da resúmenes distintos para usuarios distintos', async () => {
     expect(await resumenClave('a', 'Clave123')).not.toBe(await resumenClave('b', 'Clave123'));

@@ -5,11 +5,24 @@ import { Button } from '../../componentes/Button';
 import { StatusChip } from '../../componentes/StatusChip';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
+import { MarcaPrioridad } from '../../componentes/MarcaPrioridad';
 import { useUsuario } from '../../servicios/sesion';
 import { profesionalesDelDia } from '../../servicios/configuracion';
 import {
+  ConsultorioEnPausaError,
+  derivarAlFinalizar,
   escucharCambios,
   finalizarAtencion,
+  MINUTOS_DE_PAUSA,
+  minutosRestantesPausa,
+  pausaDe,
+  pausarConsultorio,
+  PROFESIONALES,
+  reanudarConsultorio,
+  turnosDelProfesional,
+  type EstadoTurnoDia,
+  type Pausa,
+  type TurnoDelDia,
   hayConexion,
   LLAMADOS_ANTES_DE_AUSENTE,
   llamarPaciente,
@@ -30,7 +43,7 @@ import './profesional.css';
 
 const ACTUALIZAR_CADA_MS = 5_000;
 
-type Accion = 'llamando' | 'rellamando' | 'finalizando' | 'ausente';
+type Accion = 'llamando' | 'rellamando' | 'finalizando' | 'ausente' | 'pausando' | 'reanudando' | 'derivando';
 
 type Estado =
   | { tipo: 'cargando' } // P04
@@ -56,6 +69,10 @@ export function ProfesionalPage() {
   const [confirmacion, setConfirmacion] = useState<string | null>(null);
   const [alerta, setAlerta] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState<Pendiente | null>(null);
+  const [pausa, setPausa] = useState<Pausa | null>(null); // DEV-58
+  const [eligiendoPausa, setEligiendoPausa] = useState(false);
+  const [derivando, setDerivando] = useState(false); // DEV-59
+  const [turnosDia, setTurnosDia] = useState<TurnoDelDia[]>([]); // DEV-57
   const [filaActiva, setFilaActiva] = useState<string | null>(null);
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
   const [ahora, setAhora] = useState(new Date());
@@ -69,10 +86,12 @@ export function ProfesionalPage() {
       const cola = await obtenerCola(consultorio);
       setEstado({ tipo: 'datos', cola });
       setUltimaActualizacion(cola.actualizadoEn);
+      setPausa(pausaDe(datos.nombre));
+      setTurnosDia(turnosDelProfesional(datos.nombre));
     } catch (e) {
       setEstado(e instanceof SinConexionError ? { tipo: 'sin-conexion' } : { tipo: 'error' });
     }
-  }, [consultorio]);
+  }, [consultorio, datos.nombre]);
 
   // Actualización periódica, al cambiar la cola en otra pestaña (tótem o secretaría) y al volver la conexión.
   useEffect(() => {
@@ -113,7 +132,9 @@ export function ProfesionalPage() {
       ok = true;
     } catch (e) {
       if (e instanceof PacienteNoDisponibleError) setAlerta('Ese paciente ya no está en espera. La lista se actualizó.');
-      else if (e instanceof PacienteEnAtencionError) setAlerta(`${e.enAtencion.numero} sigue en atención. Finalícela antes de llamar a otro paciente.`);
+      else if (e instanceof PacienteEnAtencionError) setAlerta(`${e.enAtencion.numero} sigue en atención. Finalícela antes de ${tipo === 'pausando' ? 'tomar una pausa' : 'llamar a otro paciente'}.`);
+      else if (e instanceof ConsultorioEnPausaError) setAlerta('El consultorio está en pausa. Toque "Reanudar atención" para volver a llamar.');
+      else if (e instanceof Error && e.name === 'OperacionNoPermitidaError') setAlerta(e.message);
       else setEstado(e instanceof SinConexionError ? { tipo: 'sin-conexion' } : { tipo: 'error' });
     } finally {
       ocupado.current = false;
@@ -141,7 +162,10 @@ export function ProfesionalPage() {
 
   // Mismas condiciones para el mouse y para el teclado (DEV-38).
   const libre = !!cola && accion === null && pendiente === null;
-  const puedeLlamar = libre && enEspera.length > 0;
+  const puedeLlamar = libre && enEspera.length > 0 && !pausa; // DEV-58: en pausa no se llama
+  const restantePausa = pausa ? minutosRestantesPausa(pausa, ahora) : 0;
+  const pendientesDeLlegar = turnosDia.filter((t) => t.estado === 'pendiente').length;
+  const porAtender = turnosDia.filter((t) => t.estado === 'pendiente' || t.estado === 'en-espera' || t.estado === 'en-atencion').length;
   const puedeAtender = libre && !!enAtencion;
 
   // Fila de la tabla que recibe el foco con Tab (foco itinerante: una sola fila en el orden de tabulación).
@@ -176,6 +200,22 @@ export function ProfesionalPage() {
     if (puedeAtender) ejecutar('rellamando', () => volverALlamar(enAtencion!), `Se volvió a llamar a ${enAtencion!.numero} en la pantalla de sala.`);
   };
 
+  /** DEV-58: pausa breve sin cerrar el consultorio. */
+  const pausar = (minutos: number) => {
+    setEligiendoPausa(false);
+    ejecutar('pausando', () => pausarConsultorio(consultorio, minutos), `Consultorio en pausa por ${minutos} minutos. La sala y la secretaría ya lo ven.`);
+  };
+
+  const reanudar = () => ejecutar('reanudando', () => reanudarConsultorio(consultorio), 'Atención reanudada. La espera estimada de la sala se recalculó.');
+
+  /** DEV-59: finaliza y deriva al paciente a otro profesional del día. */
+  const derivar = async (profesional: string, motivo: string) => {
+    if (!enAtencion) return;
+    const numero = enAtencion.numero;
+    setDerivando(false);
+    await ejecutar('derivando', () => derivarAlFinalizar(enAtencion, profesional, motivo), `${numero} quedó en la cola de ${profesional}. La secretaría ve la derivación.`);
+  };
+
   const enfocarFila = (turnoId: string | null) => {
     if (!turnoId) return;
     setFilaActiva(turnoId);
@@ -191,6 +231,7 @@ export function ProfesionalPage() {
     if (atajo === 'ir-a-lista') return enfocarFila(filaConFoco);
     if (atajo === 'llamar-siguiente') {
       if (puedeLlamar) pedirLlamado();
+      else if (libre && pausa) setAlerta('El consultorio está en pausa. Toque "Reanudar atención" para volver a llamar.');
       else if (libre) setAlerta('No hay pacientes esperando para llamar.');
       return;
     }
@@ -303,6 +344,12 @@ export function ProfesionalPage() {
                   </div>
                   <span className="prof__numero">{(enAtencion ?? proximo)!.numero}</span>
                   <span className="prof__nombre">{(enAtencion ?? proximo)!.paciente}</span>
+                  {(enAtencion ?? proximo)!.prioridad && <MarcaPrioridad motivo={(enAtencion ?? proximo)!.prioridad!.motivo} />}
+                  {(enAtencion ?? proximo)!.tipo === 'derivacion' && (
+                    <span className="prof__derivado">
+                      <Icon name="swap" size={18} /> Derivado por {(enAtencion ?? proximo)!.derivaciones?.slice(-1)[0]?.desde}
+                    </span>
+                  )}
                   <span className="prof__detalle">
                     {enAtencion ? (
                       <>
@@ -319,6 +366,22 @@ export function ProfesionalPage() {
                 </div>
               )}
             </section>
+
+            {pausa && (
+              <div className="prof__pausa" role="status">
+                <Icon name="pause" size={32} />
+                <div>
+                  <strong>Consultorio en pausa</strong>
+                  <span>
+                    {restantePausa > 0 ? `Vuelve en unos ${restantePausa} minutos` : 'Pasó el tiempo estimado'} · desde las {hora(pausa.desde)}. La sala muestra la demora y no se puede
+                    llamar.
+                  </span>
+                </div>
+                <Button className="prof__reanudar" icon={<Icon name="play" size={28} />} loading={accion === 'reanudando'} disabled={accion !== null && accion !== 'reanudando'} onClick={reanudar}>
+                  Reanudar atención
+                </Button>
+              </div>
+            )}
 
             {confirmacion && (
               <p className="prof__confirmacion" role="status">
@@ -360,6 +423,16 @@ export function ProfesionalPage() {
                   <Button
                     variant="secondary"
                     className="prof__secundaria"
+                    icon={<Icon name="swap" size={28} />}
+                    loading={accion === 'derivando'}
+                    disabled={(!puedeAtender && accion !== 'derivando') || PROFESIONALES.length < 2}
+                    onClick={() => setDerivando(true)}
+                  >
+                    {accion === 'derivando' ? 'Derivando…' : 'Finalizar y derivar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="prof__secundaria"
                     icon={<Icon name="user-x" size={28} />}
                     loading={accion === 'ausente'}
                     disabled={!puedeMarcarAusente || (!puedeAtender && accion !== 'ausente')}
@@ -388,6 +461,7 @@ export function ProfesionalPage() {
                 )}
               </div>
             ) : (
+              <>
               <Button
                 className={`prof__accion ${estado.tipo === 'cargando' ? 'prof__accion--consultando' : ''}`}
                 icon={<Icon name="megaphone" size={40} />}
@@ -399,6 +473,19 @@ export function ProfesionalPage() {
                 {estado.tipo === 'cargando' ? 'Consultando…' : accion === 'llamando' ? 'Llamando…' : 'Llamar al siguiente'}
                 {estado.tipo !== 'cargando' && accion !== 'llamando' && <Tecla>{ATAJOS['llamar-siguiente']}</Tecla>}
               </Button>
+              {!pausa && (
+                <Button
+                  variant="secondary"
+                  className="prof__secundaria"
+                  icon={<Icon name="pause" size={28} />}
+                  loading={accion === 'pausando'}
+                  disabled={!libre && accion !== 'pausando'}
+                  onClick={() => setEligiendoPausa(true)}
+                >
+                  {accion === 'pausando' ? 'Pausando…' : 'Pausa'}
+                </Button>
+              )}
+              </>
             )}
           </div>
 
@@ -432,7 +519,7 @@ export function ProfesionalPage() {
                       }}
                       className={`prof__fila ${i === 0 ? 'prof__fila--proxima' : ''}`}
                       tabIndex={a.turnoId === filaConFoco ? 0 : -1}
-                      aria-label={`${a.numero}, ${a.paciente}${i === 0 ? ', próximo paciente' : ''}`}
+                      aria-label={`${a.numero}, ${a.paciente}${a.prioridad ? ', con prioridad' : ''}${i === 0 ? ', próximo paciente' : ''}`}
                       onFocus={(e) => e.target === e.currentTarget && setFilaActiva(a.turnoId)}
                       onKeyDown={(e) => teclaEnFila(e, i, a)}
                     >
@@ -441,6 +528,12 @@ export function ProfesionalPage() {
                       </td>
                       <td data-label="Paciente" className="prof__tabla-paciente">
                         {a.paciente}
+                        {a.prioridad && (
+                          <>
+                            {' '}
+                            <MarcaPrioridad motivo={a.prioridad.motivo} conMotivo={false} />
+                          </>
+                        )}
                       </td>
                       <td data-label="Turno">{a.tipo === 'demanda' || a.tipo === 'contraturno' ? textoTurno(a) : hora(a.horaTurno)}</td>
                       <td data-label="Llegada">{hora(a.registradaEn)}</td>
@@ -471,6 +564,46 @@ export function ProfesionalPage() {
             </p>
           </section>
         </div>
+
+        {/* DEV-57: turnos del día, también los que todavía no llegaron. Sin datos de salud. */}
+        <section className="prof__lista prof__turnos" aria-labelledby="prof-turnos-titulo">
+          <div className="prof__lista-encabezado">
+            <h2 id="prof-turnos-titulo">Turnos de hoy</h2>
+            <span aria-live="polite">
+              {turnosDia.length === 0
+                ? 'Sin turnos para hoy'
+                : `${turnosDia.length} turnos · faltan llegar ${pendientesDeLlegar} · por atender ${porAtender} · se actualiza solo`}
+            </span>
+          </div>
+          {turnosDia.length > 0 ? (
+            <table className="prof__tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Hora</th>
+                  <th scope="col">Número</th>
+                  <th scope="col">Paciente</th>
+                  <th scope="col">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {turnosDia.map((t) => (
+                  <tr key={t.id}>
+                    <td data-label="Hora">{hora(t.horario)}</td>
+                    <td data-label="Número" className="prof__tabla-numero">
+                      {t.numero ?? '—'}
+                    </td>
+                    <td data-label="Paciente">{t.paciente}</td>
+                    <td data-label="Estado">
+                      <EstadoTurno estado={t.estado} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="prof__lista-vacia">{cola ? 'No hay turnos asignados para hoy.' : 'Consultando turnos…'}</p>
+          )}
+        </section>
 
         {/* DEV-38: atajos visibles en pantalla */}
         <section className="prof__atajos" aria-label="Atajos de teclado">
@@ -505,6 +638,10 @@ export function ProfesionalPage() {
       {pendiente && (
         <ConfirmarLlamado pendiente={pendiente} onCancelar={() => setPendiente(null)} onConfirmar={() => llamar(pendiente)} />
       )}
+      {eligiendoPausa && <ElegirPausa onCancelar={() => setEligiendoPausa(false)} onElegir={pausar} />}
+      {derivando && enAtencion && (
+        <DerivarPaciente admision={enAtencion} actual={datos.nombre} especialidad={datos.especialidad} onCancelar={() => setDerivando(false)} onConfirmar={derivar} />
+      )}
     </div>
   );
 }
@@ -513,6 +650,7 @@ export function ProfesionalPage() {
 function textoTurno(a: Admision) {
   if (a.tipo === 'demanda') return 'Sin turno';
   if (a.tipo === 'contraturno') return 'Contraturno';
+  if (a.tipo === 'derivacion') return 'Derivado';
   return `turno ${hora(a.horaTurno)}`;
 }
 
@@ -564,5 +702,123 @@ function Mensaje({ icono, titulo, children }: { icono: ReactNode; titulo: string
       <h2>{titulo}</h2>
       <p>{children}</p>
     </div>
+  );
+}
+
+const ETIQUETA_TURNO: Record<EstadoTurnoDia, string> = {
+  pendiente: 'Pendiente de llegada',
+  'en-espera': 'Llegó · en espera',
+  'en-atencion': 'En atención',
+  atendido: 'Atendido',
+  ausente: 'Ausente',
+  'se-retiro': 'Se retiró',
+  derivado: 'Derivado a otro profesional',
+};
+
+const ICONO_TURNO: Record<EstadoTurnoDia, 'clock' | 'megaphone' | 'check-circle' | 'user-x' | 'log-out' | 'swap' | 'calendar-check'> = {
+  pendiente: 'calendar-check',
+  'en-espera': 'clock',
+  'en-atencion': 'megaphone',
+  atendido: 'check-circle',
+  ausente: 'user-x',
+  'se-retiro': 'log-out',
+  derivado: 'swap',
+};
+
+/** DEV-57: estado del turno con ícono y texto. */
+function EstadoTurno({ estado }: { estado: EstadoTurnoDia }) {
+  return (
+    <span className={`estado-turno estado-turno--${estado}`}>
+      <Icon name={ICONO_TURNO[estado]} size={16} />
+      {ETIQUETA_TURNO[estado]}
+    </span>
+  );
+}
+
+/** DEV-58: duración estimada de la pausa. */
+function ElegirPausa({ onCancelar, onElegir }: { onCancelar: () => void; onElegir: (minutos: number) => void }) {
+  return (
+    <Modal titulo="Pausa breve" subtitulo="El consultorio no se cierra. La sala muestra la demora y no se puede llamar hasta reanudar." onCerrar={onCancelar}>
+      <div className="prof__pausas" role="group" aria-label="Duración estimada">
+        {MINUTOS_DE_PAUSA.map((m) => (
+          <Button key={m} variant="secondary" className="prof__secundaria" onClick={() => onElegir(m)}>
+            {m} minutos
+          </Button>
+        ))}
+      </div>
+      <div className="modal__acciones">
+        <Button variant="secondary" onClick={onCancelar}>
+          Cancelar
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+const MOTIVOS_DERIVAR = ['Requiere otra especialidad', 'Interconsulta', 'Control con otro profesional', 'Otro'];
+
+type DerivarProps = {
+  admision: Admision;
+  actual: string;
+  especialidad: string;
+  onCancelar: () => void;
+  onConfirmar: (profesional: string, motivo: string) => void;
+};
+
+/** DEV-59: el profesional elige a quién derivar. El paciente pasa directo a esa cola. */
+function DerivarPaciente({ admision, actual, especialidad, onCancelar, onConfirmar }: DerivarProps) {
+  // Primero los de otra especialidad: es el caso más común.
+  const opciones = PROFESIONALES.filter((p) => p.nombre !== actual).sort((a, b) => Number(a.especialidad === especialidad) - Number(b.especialidad === especialidad));
+  const [profesional, setProfesional] = useState(opciones[0]?.nombre ?? '');
+  const [motivo, setMotivo] = useState(MOTIVOS_DERIVAR[0]);
+  const [detalle, setDetalle] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const confirmar = () => {
+    if (!profesional) return setError('Elija el profesional de destino.');
+    if (motivo === 'Otro' && !detalle.trim()) return setError('Escriba el motivo de la derivación.');
+    onConfirmar(profesional, motivo === 'Otro' ? detalle.trim() : motivo);
+  };
+
+  return (
+    <Modal titulo="Finalizar y derivar" subtitulo={`${admision.numero} · ${admision.paciente}`} onCerrar={onCancelar}>
+      <p className="prof__modal-texto">Se finaliza esta atención y el paciente pasa directo a la cola del profesional elegido, sin volver a secretaría. Conserva su número.</p>
+      <div className="campo">
+        <label htmlFor="prof-derivar-a">Derivar a</label>
+        <select id="prof-derivar-a" className="select" value={profesional} onChange={(e) => setProfesional(e.target.value)}>
+          {opciones.map((p) => (
+            <option key={p.nombre} value={p.nombre}>
+              {p.especialidad} · {p.nombre} · Consultorio {p.consultorio}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="campo">
+        <label htmlFor="prof-derivar-motivo">Motivo</label>
+        <select id="prof-derivar-motivo" className="select" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+          {MOTIVOS_DERIVAR.map((m) => (
+            <option key={m}>{m}</option>
+          ))}
+        </select>
+      </div>
+      {motivo === 'Otro' && (
+        <div className="campo">
+          <label htmlFor="prof-derivar-detalle">Detalle (sin datos de salud)</label>
+          <input id="prof-derivar-detalle" className="input" maxLength={80} value={detalle} onChange={(e) => setDetalle(e.target.value)} />
+        </div>
+      )}
+      {error && (
+        <p className="campo__error" role="alert">
+          {error}
+        </p>
+      )}
+      <p className="modal__nota">La derivación queda registrada: quién, cuándo, desde y hacia qué profesional.</p>
+      <div className="modal__acciones">
+        <Button variant="secondary" onClick={onCancelar}>
+          Cancelar
+        </Button>
+        <Button onClick={confirmar}>Finalizar y derivar</Button>
+      </div>
+    </Modal>
   );
 }

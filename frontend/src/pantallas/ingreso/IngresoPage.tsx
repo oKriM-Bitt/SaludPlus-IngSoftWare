@@ -5,9 +5,11 @@ import { Icon, type IconName } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import { FormularioClave } from '../../componentes/FormularioClave';
-import { abrirSesion, comprobarIngreso, inactividadMinutos, usuarioActual as leerUsuarioActual, useUsuario } from '../../servicios/sesion';
+import { ElegirConsultorio } from '../../componentes/ElegirConsultorio';
+import { opcionesDeConsultorio } from '../../servicios/turnos';
+import { abrirSesion, cerrarSesion, comprobarIngreso, inactividadMinutos, usuarioActual as leerUsuarioActual, useUsuario } from '../../servicios/sesion';
 import { CLAVE_DEMO, ETIQUETA_ROL, puedeAcceder, usuariosDemo, type Usuario } from '../../servicios/usuarios';
-import { configuracion, nombreSucursal, sucursalPorId, type Rol, type UsuarioRegistrado } from '../../servicios/configuracion';
+import { configuracion, nombreSucursal, profesionalesDelDia, sucursalPorId, type Rol, type UsuarioRegistrado } from '../../servicios/configuracion';
 import './ingreso.css';
 
 const BENEFICIOS: { icono: IconName; titulo: string; texto: string }[] = [
@@ -21,7 +23,11 @@ const accesosRapidos = () =>
   (['secretaria', 'profesional', 'direccion'] as Rol[]).map((rol) => usuariosDemo().find((u) => u.rol === rol)).filter((u): u is UsuarioRegistrado => !!u);
 
 /** Pasos del ingreso: credenciales, cambio obligatorio de contraseña (#79) y elección de sucursal (#56). */
-type Etapa = { tipo: 'credenciales' } | { tipo: 'cambio-clave'; registrado: UsuarioRegistrado } | { tipo: 'sucursal'; registrado: UsuarioRegistrado };
+type Etapa =
+  | { tipo: 'credenciales' }
+  | { tipo: 'cambio-clave'; registrado: UsuarioRegistrado }
+  | { tipo: 'sucursal'; registrado: UsuarioRegistrado }
+  | { tipo: 'consultorio'; registrado: UsuarioRegistrado; sucursal: string }; // DEV-60
 
 /** Inicio de sesión del personal (#47, rediseño #80). El tótem y la sala no lo requieren. */
 export function IngresoPage() {
@@ -49,9 +55,21 @@ export function IngresoPage() {
 
   /** Abre la sesión y entra al sistema. */
   const entrar = (r: UsuarioRegistrado, sucursal: string) => {
-    abrirSesion(r, sucursal);
+    // DEV-60: el profesional que puede rotar elige primero el consultorio del día.
+    if (etapa.tipo !== 'consultorio' && puedeElegirConsultorio(r, sucursal)) {
+      abrirSesion(r, sucursal); // la elección queda registrada a su nombre
+      setEtapa({ tipo: 'consultorio', registrado: r, sucursal });
+      return;
+    }
+    if (etapa.tipo !== 'consultorio') abrirSesion(r, sucursal);
     const u = leerUsuarioActual();
     navegar(u ? destino(volver, u) : '/inicio', { replace: true });
+  };
+
+  /** Vuelve al ingreso sin dejar la sesión abierta a medias. */
+  const volverAlIngreso = () => {
+    if (etapa.tipo === 'consultorio') cerrarSesion();
+    setEtapa({ tipo: 'credenciales' });
   };
 
   /** Después de validar: cambio de contraseña pendiente, elección de sucursal o ingreso directo. */
@@ -144,7 +162,20 @@ export function IngresoPage() {
             </div>
           </div>
 
-          {etapa.tipo === 'cambio-clave' ? (
+          {etapa.tipo === 'consultorio' ? (
+            <>
+              <div className="ingreso__sucursales-titulo">
+                <h2>¿En qué consultorio atiende hoy?</h2>
+                <p>
+                  {nombreSucursal(etapa.sucursal)}. Le proponemos el de su agenda. Puede cambiarlo después desde el menú si no tiene un paciente en atención.
+                </p>
+              </div>
+              <ElegirConsultorio profesionalId={etapa.registrado.profesional!} sucursal={etapa.sucursal} onListo={() => entrar(etapa.registrado, etapa.sucursal)} />
+              <button type="button" className="ingreso__volver" onClick={volverAlIngreso}>
+                <Icon name="undo" size={20} /> Volver al ingreso
+              </button>
+            </>
+          ) : etapa.tipo === 'cambio-clave' ? (
             <>
               <Alerta tono="info" titulo="Elija una contraseña nueva">
                 Dirección restableció su contraseña. Para continuar, cree una propia que solo usted conozca.
@@ -313,4 +344,11 @@ export function IngresoPage() {
       </main>
     </div>
   );
+}
+
+/** DEV-60: el profesional atiende hoy en la sucursal y tiene más de un consultorio libre para elegir. */
+function puedeElegirConsultorio(r: UsuarioRegistrado, sucursal: string): boolean {
+  if (r.rol !== 'profesional' || !r.profesional) return false;
+  if (!profesionalesDelDia(sucursal).some((p) => p.id === r.profesional)) return false;
+  return opcionesDeConsultorio(r.profesional, sucursal).filter((o) => !o.ocupadoPor).length > 1;
 }

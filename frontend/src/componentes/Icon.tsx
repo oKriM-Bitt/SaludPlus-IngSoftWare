@@ -38,7 +38,13 @@ export type IconName =
   | 'download'
   | 'key'
   | 'more'
-  | 'undo';
+  | 'undo'
+  | 'pause'
+  | 'play'
+  | 'flag'
+  | 'printer'
+  | 'search'
+  | 'inbox';
 
 const paths: Record<IconName, JSX.Element> = {
   chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
@@ -47,6 +53,17 @@ const paths: Record<IconName, JSX.Element> = {
   key: <path d="M15 7a4 4 0 1 1-3.9 4.9L3 20v-3h3v-3h3l2.1-2.1A4 4 0 0 1 15 7zM16 10h.01" />,
   more: <path d="M12 6h.01M12 12h.01M12 18h.01" />,
   undo: <path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" />,
+  pause: <path d="M8 5v14M16 5v14" />,
+  play: <path d="M7 4l13 8-13 8z" />,
+  flag: <path d="M5 21V4M5 4h12l-2.5 4L17 12H5" />,
+  printer: <path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </>
+  ),
+  inbox: <path d="M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6H3v-6z" />,
   'log-out': <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   volume: <path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />,

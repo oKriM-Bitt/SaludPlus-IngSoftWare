@@ -4,11 +4,16 @@ import { Icon } from './Icon';
 import { cambiarSucursal, cerrarSesion, useUsuario } from '../servicios/sesion';
 import { destinosPorRol, ETIQUETA_ROL } from '../servicios/usuarios';
 import { nombreSucursal, profesionalesDelDia } from '../servicios/configuracion';
+import { tienePacienteEnAtencion } from '../servicios/turnos';
+import { Modal } from '../pantallas/secretaria/Modal';
+import { Alerta } from './Alerta';
+import { ElegirConsultorio } from './ElegirConsultorio';
 
 /** Menú de navegación por rol (#48): usuario, sucursal (#56), opciones permitidas, contraseña (#79) y salida. */
 export function MenuUsuario() {
   const usuario = useUsuario();
   const [abierto, setAbierto] = useState(false);
+  const [cambiandoConsultorio, setCambiandoConsultorio] = useState(false); // DEV-60
   const contenedor = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -108,6 +113,22 @@ export function MenuUsuario() {
             })}
           </ul>
 
+          {usuario.rol === 'profesional' && usuario.profesionalId && (
+            <div className="menu__grupo">
+              <button
+                type="button"
+                className="menu__item"
+                onClick={() => {
+                  setAbierto(false);
+                  setCambiandoConsultorio(true);
+                }}
+              >
+                <Icon name="swap" size={22} /> Cambiar de consultorio
+                <span className="menu__detalle">Hoy: {usuario.consultorio ?? 'sin asignar'}</span>
+              </button>
+            </div>
+          )}
+
           {otrasSucursales.length > 0 && (
             <div className="menu__grupo">
               <span className="menu__grupo-titulo">Cambiar de sucursal</span>
@@ -128,6 +149,36 @@ export function MenuUsuario() {
             <Icon name="log-out" size={22} /> Cerrar sesión
           </button>
         </nav>
+      )}
+
+      {cambiandoConsultorio && usuario.profesionalId && (
+        <Modal titulo="Cambiar de consultorio" subtitulo={`${usuario.centro} · hoy atiende en el consultorio ${usuario.consultorio ?? '—'}`} onCerrar={() => setCambiandoConsultorio(false)}>
+          {usuario.profesional && tienePacienteEnAtencion(usuario.profesional) ? (
+            <>
+              <Alerta tono="warning" titulo="Tiene un paciente en atención">
+                Finalice la atención antes de cambiar de consultorio.
+              </Alerta>
+              <div className="modal__acciones">
+                <button type="button" className="btn btn--primary" onClick={() => setCambiandoConsultorio(false)}>
+                  <span>Entendido</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="modal__nota">Los pacientes que lo esperan pasan con usted al consultorio nuevo. La sala y la secretaría lo ven enseguida.</p>
+              <ElegirConsultorio
+                profesionalId={usuario.profesionalId}
+                sucursal={usuario.sucursal}
+                onListo={() => {
+                  setCambiandoConsultorio(false);
+                  // El consultorio forma parte de la dirección de la vista del profesional.
+                  if (pathname === '/profesional') navegar('/profesional', { replace: true });
+                }}
+              />
+            </>
+          )}
+        </Modal>
       )}
     </div>
   );

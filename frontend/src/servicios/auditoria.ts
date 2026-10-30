@@ -45,4 +45,14 @@ export const ETIQUETA_ACCION: Record<string, string> = {
   'cierre-dia': 'Cierre del día',
   'reapertura-dia': 'Reapertura del día',
   exportacion: 'Exportación de reporte',
+  'aviso-sala': 'Aviso publicado en la sala', // DEV-55
+  'aviso-sala-quitado': 'Aviso quitado de la sala',
+  'llegada-deshecha': 'Registro deshecho en el tótem', // DEV-53
+  prioridad: 'Prioridad de atención', // DEV-49
+  'prioridad-quitada': 'Prioridad quitada',
+  'pausa-consultorio': 'Pausa del consultorio', // DEV-58
+  'reanudar-consultorio': 'Consultorio reanudado',
+  'cambio-consultorio': 'Cambio de consultorio del día', // DEV-60
+  'derivacion-consultorio': 'Derivación desde el consultorio', // DEV-59
+  'ausente-box': 'Ausente en el box de admisión', // DEV-44
 };

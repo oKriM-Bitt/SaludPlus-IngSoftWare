@@ -7,9 +7,26 @@ import { Alerta } from '../../componentes/Alerta';
 import { StatusChip, type EstadoTurno } from '../../componentes/StatusChip';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
+import { MarcaPrioridad } from '../../componentes/MarcaPrioridad';
 import {
   anularLlegada,
   asignarProfesional,
+  ausenteEnBox,
+  boxDe,
+  boxesDeSucursal,
+  colaDeBox,
+  elegirBox,
+  finalizarBox,
+  LLAMADOS_ANTES_DE_AUSENTE,
+  llamarAlBox,
+  marcarPrioridad,
+  minutosRestantesPausa,
+  ocupacionBoxes,
+  PacienteEnAtencionError,
+  PacienteNoDisponibleError,
+  pacienteEnBox,
+  pausasDeHoy,
+  volverALlamarBox,
   buscarTurno,
   calcularDemoras,
   derivarPaciente,
@@ -41,10 +58,13 @@ import {
   type Turno,
 } from '../../servicios/turnos';
 import { useUsuario } from '../../servicios/sesion';
+import { avisosVigentes, publicarAviso, quitarAviso, type AvisoSala } from '../../servicios/avisos';
+import { coincideBusqueda, partesResaltadas } from '../../servicios/busqueda';
 import { TOLERANCIA_MINUTOS } from '../../servicios/tolerancia';
 import { fechaLarga, hora, minutosEntre } from '../../utilidades/fechas';
 import { ModalAsignar, ModalContraturno, ModalDemanda } from './Modales';
 import { ModalAnular, ModalDerivar, ModalEstadoProfesional, ModalSeRetiro } from './ModalesOperacion';
+import { ModalAvisoSala, ModalPrioridad } from './ModalesSala';
 import './secretaria.css';
 
 const ACTUALIZAR_CADA_MS = 5_000;
@@ -61,7 +81,9 @@ type ModalAbierto =
   | { tipo: 'derivar'; admision: Admision } // #58
   | { tipo: 'retiro'; admision: Admision } // #64
   | { tipo: 'anular'; admision: Admision } // #65
-  | { tipo: 'estado-profesional'; profesional: Profesional }; // #63
+  | { tipo: 'estado-profesional'; profesional: Profesional } // #63
+  | { tipo: 'prioridad'; admision: Admision } // DEV-49
+  | { tipo: 'aviso-sala' }; // DEV-55
 
 /** Valor del filtro de profesional para las demandas espontáneas del tótem todavía sin asignar (DEV-33). */
 const SIN_ASIGNAR = '__sin-asignar__';
@@ -94,7 +116,17 @@ const ordenEstado: Record<EstadoTurno, number> = {
 };
 
 function ordenarFilas(a: Admision, b: Admision) {
-  return ordenEstado[estadoVisible(a)] - ordenEstado[estadoVisible(b)] || a.horaTurno.localeCompare(b.horaTurno);
+  // DEV-49: dentro del mismo estado, los pacientes con prioridad van primero.
+  return ordenEstado[estadoVisible(a)] - ordenEstado[estadoVisible(b)] || Number(!!b.prioridad) - Number(!!a.prioridad) || a.horaTurno.localeCompare(b.horaTurno);
+}
+
+/** DEV-54: nombre con lo buscado resaltado. */
+function Resaltado({ texto, busqueda }: { texto: string; busqueda: string }) {
+  return (
+    <span>
+      {partesResaltadas(texto, busqueda).map((p, i) => (p.marca ? <mark key={i}>{p.texto}</mark> : p.texto))}
+    </span>
+  );
 }
 
 const esperando = (a: Admision) => a.estado === 'en-espera';
@@ -106,6 +138,9 @@ export function SecretariaPage() {
   const [ahora, setAhora] = useState(new Date());
   const [filtroProfesional, setFiltroProfesional] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<EstadoTurno | ''>('');
+  const [busqueda, setBusqueda] = useState(''); // DEV-54
+  const [accionBox, setAccionBox] = useState<string | null>(null); // DEV-44
+  const campoBusqueda = useRef<HTMLInputElement>(null);
   const [documento, setDocumento] = useState('');
   const [errorCampo, setErrorCampo] = useState<string | null>(null);
   const [registrando, setRegistrando] = useState(false);
@@ -159,15 +194,26 @@ export function SecretariaPage() {
       registros
         .filter((a) => !filtroProfesional || (filtroProfesional === SIN_ASIGNAR ? sinProfesional(a) : a.profesional === filtroProfesional))
         .filter((a) => !filtroEstado || estadoVisible(a) === filtroEstado)
+        .filter((a) => coincideBusqueda(a, busqueda)) // DEV-54: se combina con los filtros
         .sort(ordenarFilas),
-    [registros, filtroProfesional, filtroEstado],
+    [registros, filtroProfesional, filtroEstado, busqueda],
   );
+  const buscando = busqueda.trim().length > 0;
   const enEspera = registros.filter(esperando).length;
   const demandasSinAsignar = registros.filter((a) => esperando(a) && sinProfesional(a));
   const canceladasSinContraturno = registros.filter((a) => a.estado === 'cancelado-tolerancia' && !a.contraturnoAsignado);
   const demoras = carga === 'ok' ? calcularDemoras(registros, ahora) : [];
   const estados = carga === 'ok' || cola ? estadosProfesionales() : {};
+  const pausas = carga === 'ok' || cola ? pausasDeHoy() : {}; // DEV-58
   const cerrado = diaCerrado();
+  // DEV-44: box de admisión de esta secretaria.
+  const yo = usuario?.usuario ?? 'sin-usuario';
+  const miBox = boxDe(yo);
+  const enMiBox = miBox ? pacienteEnBox(miBox) : null;
+  const colaBox = carga === 'ok' || cola ? colaDeBox() : [];
+  const ocupacion = ocupacionBoxes();
+  // DEV-55: avisos generales vigentes en la sala de esta sucursal.
+  const avisosSala: AvisoSala[] = usuario ? avisosVigentes(usuario.sucursal, ahora) : [];
 
   const operativo = carga === 'ok';
   const puedeRegistrar = operativo && !cerrado;
@@ -360,6 +406,41 @@ export function SecretariaPage() {
 
   const enEsperaDe = (nombre: string) => registros.filter((a) => esperando(a) && a.profesional === nombre).length;
 
+  /** DEV-44: operaciones del box con aviso del resultado. */
+  const operarBox = async (accion: string, operacion: () => Promise<Admision | void>, aviso: (a: Admision | void) => Aviso) => {
+    setAccionBox(accion);
+    try {
+      await conBloqueo(async () => {
+        const r = await operacion();
+        if (r) aplicarLocal([r]);
+        if (r) setResaltado(r.numero);
+        setMensaje(aviso(r));
+      });
+    } catch (e) {
+      setMensaje({
+        tono: 'warning',
+        titulo:
+          e instanceof PacienteEnAtencionError
+            ? `${e.enAtencion.numero} sigue en su box. Finalice esa atención primero.`
+            : e instanceof PacienteNoDisponibleError
+              ? 'No hay pacientes para llamar al box'
+              : e instanceof Error && e.name === 'OperacionNoPermitidaError'
+                ? e.message
+                : 'No se pudo completar la operación del box',
+      });
+    } finally {
+      setAccionBox(null);
+    }
+  };
+
+  const llamarBox = (a?: Admision) =>
+    miBox &&
+    operarBox(
+      'llamar',
+      () => llamarAlBox(miBox, a?.turnoId),
+      (r) => ({ tono: 'success', titulo: r ? `${r.numero} llamado al box ${miBox}` : 'Llamado', texto: 'La sala muestra el número y el box.' }),
+    );
+
   return (
     <div className="sec">
       <header className="sec__header">
@@ -459,6 +540,40 @@ export function SecretariaPage() {
         </form>
 
         <div className="sec__filtros">
+          <div className="campo sec__buscar">
+            <label htmlFor="sec-buscar">Buscar en la cola</label>
+            <div className="sec__buscar-control">
+              <Icon name="search" size={20} className="sec__buscar-icono" />
+              <input
+                ref={campoBusqueda}
+                id="sec-buscar"
+                type="search"
+                className="input"
+                placeholder="Número, DNI o nombre"
+                autoComplete="off"
+                value={busqueda}
+                aria-describedby="sec-buscar-resultado"
+                onChange={(e) => setBusqueda(e.target.value)}
+                onKeyDown={(e) => e.key === 'Escape' && setBusqueda('')}
+              />
+              {buscando && (
+                <button
+                  type="button"
+                  className="sec__buscar-limpiar"
+                  aria-label="Limpiar búsqueda"
+                  onClick={() => {
+                    setBusqueda('');
+                    campoBusqueda.current?.focus();
+                  }}
+                >
+                  <Icon name="x-circle" size={20} />
+                </button>
+              )}
+            </div>
+            <span id="sec-buscar-resultado" className="sec__buscar-resultado" aria-live="polite">
+              {buscando ? (filas.length === 1 ? '1 coincidencia' : `${filas.length} coincidencias`) : ''}
+            </span>
+          </div>
           <div className="campo">
             <label htmlFor="sec-profesional">Profesional</label>
             <select id="sec-profesional" className="select" value={filtroProfesional} onChange={(e) => setFiltroProfesional(e.target.value)}>
@@ -530,23 +645,164 @@ export function SecretariaPage() {
           <Alerta tono="info" titulo={`La consulta se actualizó a las ${horaDatos}`} />
         )}
 
+        {/* DEV-44: llamado a los boxes de admisión */}
+        {(carga === 'ok' || cola) && boxesDeSucursal().length > 0 && (
+          <section className="sec__box" aria-labelledby="sec-box-titulo">
+            <div className="sec__box-encabezado">
+              <h2 id="sec-box-titulo">
+                <Icon name="inbox" size={22} /> {miBox ? `Box ${miBox}` : 'Box de admisión'}
+              </h2>
+              <div className="campo sec__box-elegir">
+                <label htmlFor="sec-box">Atiendo en</label>
+                <select
+                  id="sec-box"
+                  className="select"
+                  value={miBox ?? ''}
+                  disabled={!operativo || !!enMiBox || accionBox !== null}
+                  onChange={(e) => {
+                    const elegido = e.target.value || null; // se lee antes de esperar: después React vuelve a dibujar el select
+                    operarBox('elegir', () => elegirBox(yo, elegido), () => ({ tono: 'success', titulo: elegido ? `Ahora atiende en el box ${elegido}` : 'Dejó el box' }));
+                  }}
+                >
+                  <option value="">Sin box (solo panel)</option>
+                  {boxesDeSucursal().map((b) => (
+                    <option key={b.id} value={b.numero} disabled={!!ocupacion[b.numero] && ocupacion[b.numero] !== yo}>
+                      Box {b.numero}
+                      {ocupacion[b.numero] && ocupacion[b.numero] !== yo ? ` · ocupado por ${ocupacion[b.numero]}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {!miBox ? (
+              <p className="sec__box-texto">Elija su box para llamar pacientes. La sala los anuncia igual que a los consultorios.</p>
+            ) : enMiBox ? (
+              <div className="sec__box-atencion">
+                <span className="sec__box-numero">{enMiBox.numero}</span>
+                <span className="sec__box-datos">
+                  <strong>{enMiBox.paciente}</strong>
+                  <span>
+                    {enMiBox.box!.llamados === 1 ? 'Llamado 1 vez' : `Llamado ${enMiBox.box!.llamados} veces`} · {enMiBox.profesional || enMiBox.servicio || 'Sin profesional'}
+                  </span>
+                </span>
+                <span className="sec__box-acciones">
+                  <Button
+                    className="sec__btn"
+                    icon={<Icon name="check" size={22} />}
+                    loading={accionBox === 'finalizar'}
+                    disabled={!operativo || (accionBox !== null && accionBox !== 'finalizar')}
+                    onClick={() =>
+                      operarBox(
+                        'finalizar',
+                        () => finalizarBox(enMiBox),
+                        (r) => ({ tono: 'success', titulo: `${enMiBox.numero} terminó en el box`, texto: r && r.profesional ? `Queda en espera de ${r.profesional}.` : 'Queda en espera. Asígnele un profesional.' }),
+                      )
+                    }
+                  >
+                    Finalizar en box
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="sec__btn"
+                    icon={<Icon name="repeat" size={22} />}
+                    loading={accionBox === 'rellamar'}
+                    disabled={!operativo || (accionBox !== null && accionBox !== 'rellamar')}
+                    onClick={() => operarBox('rellamar', () => volverALlamarBox(enMiBox), () => ({ tono: 'success', titulo: `Se volvió a llamar a ${enMiBox.numero} al box ${miBox}` }))}
+                  >
+                    Volver a llamar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="sec__btn"
+                    icon={<Icon name="user-x" size={22} />}
+                    loading={accionBox === 'ausente'}
+                    disabled={!operativo || enMiBox.box!.llamados < LLAMADOS_ANTES_DE_AUSENTE || (accionBox !== null && accionBox !== 'ausente')}
+                    title={enMiBox.box!.llamados < LLAMADOS_ANTES_DE_AUSENTE ? `Disponible después de ${LLAMADOS_ANTES_DE_AUSENTE} llamados` : undefined}
+                    onClick={() => operarBox('ausente', () => ausenteEnBox(enMiBox), () => ({ tono: 'success', titulo: `${enMiBox.numero} quedó como ausente` }))}
+                  >
+                    No se presentó
+                  </Button>
+                </span>
+              </div>
+            ) : (
+              <div className="sec__box-atencion">
+                <span className="sec__box-texto">
+                  {colaBox.length === 0 ? 'No hay pacientes esperando pasar por un box.' : `${colaBox.length} por pasar por box · próximo ${colaBox[0].numero}${colaBox[0].prioridad ? ' (prioridad)' : ''}`}
+                </span>
+                <Button className="sec__btn" icon={<Icon name="megaphone" size={22} />} loading={accionBox === 'llamar'} disabled={!operativo || colaBox.length === 0 || accionBox !== null} onClick={() => llamarBox()}>
+                  Llamar al siguiente
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* DEV-55: avisos generales en la pantalla de sala */}
+        {(carga === 'ok' || cola) && (
+          <section className="sec__avisos" aria-labelledby="sec-avisos-titulo">
+            <div className="sec__box-encabezado">
+              <h2 id="sec-avisos-titulo">
+                <Icon name="monitor" size={22} /> Avisos en la sala
+              </h2>
+              <Button variant="secondary" className="sec__btn sec__btn--auto" disabled={!operativo} onClick={() => setModal({ tipo: 'aviso-sala' })}>
+                Nuevo aviso
+              </Button>
+            </div>
+            {avisosSala.length === 0 ? (
+              <p className="sec__box-texto">No hay avisos en la pantalla de sala.</p>
+            ) : (
+              <ul className="sec__avisos-lista">
+                {avisosSala.map((a) => (
+                  <li key={a.id}>
+                    <span>
+                      <strong>{a.texto}</strong>
+                      <span>
+                        Hasta las {hora(a.hasta)} · {a.usuario}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="sec__link"
+                      disabled={!operativo}
+                      onClick={() => {
+                        quitarAviso(a.id, yo);
+                        setMensaje({ tono: 'success', titulo: 'Se quitó el aviso de la sala' });
+                        setAhora(new Date());
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         {(carga === 'ok' || cola) && PROFESIONALES.length > 0 && (
           <section className="sec__profesionales" aria-labelledby="sec-prof-titulo">
             <h2 id="sec-prof-titulo">Profesionales de hoy</h2>
             <ul>
               {PROFESIONALES.map((p) => {
                 const e = estados[p.nombre];
+                const pausa = pausas[p.nombre];
                 return (
-                  <li key={p.nombre} className={e ? `sec__prof sec__prof--${e.estado}` : 'sec__prof'}>
+                  <li key={p.nombre} className={e ? `sec__prof sec__prof--${e.estado}` : pausa ? 'sec__prof sec__prof--demorado' : 'sec__prof'}>
                     <span className="sec__prof-datos">
                       <strong>{p.nombre}</strong>
                       <span>
                         {p.especialidad} · Consultorio {p.consultorio} · {enEsperaDe(p.nombre)} en espera
                       </span>
                     </span>
-                    <span className={`sec__prof-estado sec__prof-estado--${e?.estado ?? 'normal'}`}>
-                      <Icon name={e?.estado === 'ausente' ? 'user-x' : e?.estado === 'demorado' ? 'clock' : 'check-circle'} size={18} />
-                      {e?.estado === 'ausente' ? 'Ausente' : e?.estado === 'demorado' ? `Demorado ${e.minutos ?? ''} min` : 'Atiende'}
+                    <span className={`sec__prof-estado sec__prof-estado--${e?.estado ?? (pausa ? 'demorado' : 'normal')}`}>
+                      <Icon name={e?.estado === 'ausente' ? 'user-x' : e?.estado === 'demorado' ? 'clock' : pausa ? 'pause' : 'check-circle'} size={18} />
+                      {e?.estado === 'ausente'
+                        ? 'Ausente'
+                        : e?.estado === 'demorado'
+                          ? `Demorado ${e.minutos ?? ''} min`
+                          : pausa
+                            ? `En pausa · ${minutosRestantesPausa(pausa, ahora) > 0 ? `vuelve en ${minutosRestantesPausa(pausa, ahora)} min` : 'por volver'}`
+                            : 'Atiende'}
                     </span>
                     <button type="button" className="sec__link" disabled={!operativo} onClick={() => setModal({ tipo: 'estado-profesional', profesional: p })}>
                       {e ? 'Cambiar aviso' : 'Avisar ausencia o demora'}
@@ -588,11 +844,17 @@ export function SecretariaPage() {
             {(carga === 'ok' || (sinConexion && cola)) && filas.length > 0 && (
               <tbody>
                 {filas.map((a) => (
-                  <tr key={a.turnoId} className={a.numero === resaltado ? 'sec__fila--resaltada' : ''}>
-                    <td data-label="Número" className="sec__numero">{a.numero}</td>
+                  <tr key={a.turnoId} className={[a.numero === resaltado ? 'sec__fila--resaltada' : '', buscando ? 'sec__fila--coincide' : '', a.prioridad ? 'sec__fila--prioridad' : ''].join(' ').trim()}>
+                    <td data-label="Número" className="sec__numero">{buscando && coincideBusqueda({ ...a, paciente: '', documento: undefined }, busqueda) ? <mark>{a.numero}</mark> : a.numero}</td>
                     <td data-label="Paciente">
                       <span className="sec__paciente">
-                        {a.paciente}
+                        <Resaltado texto={a.paciente} busqueda={busqueda} />
+                        {a.prioridad && <MarcaPrioridad motivo={a.prioridad.motivo} />}
+                        {a.tipo === 'derivacion' && (
+                          <span className="sec__badge" title="Derivado desde un consultorio: no vuelve a pasar por secretaría">
+                            Derivado por {a.derivaciones?.slice(-1)[0]?.desde ?? 'consultorio'}
+                          </span>
+                        )}
                         {turnosHoyDe(a.documento) > 1 && (
                           <span className="sec__badge" title="El paciente tiene más de un turno hoy">
                             {turnosHoyDe(a.documento)} turnos hoy
@@ -615,15 +877,19 @@ export function SecretariaPage() {
                       )}
                     </td>
                     <td data-label="Consultorio">{a.consultorio || '—'}</td>
-                    <td data-label="Hora del turno">{a.tipo === 'demanda' ? 'Sin turno' : hora(a.horaTurno)}</td>
+                    <td data-label="Hora del turno">{a.tipo === 'demanda' ? 'Sin turno' : a.tipo === 'derivacion' ? `Derivado ${hora(a.horaTurno)}` : hora(a.horaTurno)}</td>
                     <td data-label="Minutos de espera">{esperando(a) ? <TiempoEspera minutos={minutosEntre(a.registradaEn, sinConexion && cola ? cola.actualizadoEn : ahora)} /> : '—'}</td>
                     <td data-label="Estado">
                       <StatusChip estado={estadoVisible(a)} />
+                      {a.box?.estado === 'llamado' && <span className="sec__box-estado">En box {a.box.numero}</span>}
+                      {a.box?.estado === 'finalizado' && a.estado === 'en-espera' && <span className="sec__box-estado">Pasó por box {a.box.numero}</span>}
                     </td>
                     <td data-label="Acciones" className="sec__acciones-fila">
                       {operativo && a.numero !== '—' && (
                         <AccionesFila
                           admision={a}
+                          onLlamarBox={miBox && !enMiBox && esperando(a) && !a.box && a.tipo !== 'derivacion' ? () => llamarBox(a) : undefined}
+                          onPrioridad={() => setModal({ tipo: 'prioridad', admision: a })}
                           onDerivar={() => setModal({ tipo: 'derivar', admision: a })}
                           onRetiro={() => setModal({ tipo: 'retiro', admision: a })}
                           onReincorporar={() =>
@@ -680,8 +946,13 @@ export function SecretariaPage() {
           {carga === 'ok' && registros.length > 0 && filas.length === 0 && (
             <div className="sec__vacio">
               <Icon name="info" size={56} className="sec__icono--info" />
-              <h3>No hay registros con estos filtros</h3>
-              <p>Cambie el profesional o el estado para ver más pacientes.</p>
+              <h3>{buscando ? `No hay pacientes que coincidan con "${busqueda.trim()}"` : 'No hay registros con estos filtros'}</h3>
+              <p>{buscando ? 'Revise lo que escribió o limpie la búsqueda. La búsqueda se combina con los filtros de profesional y estado.' : 'Cambie el profesional o el estado para ver más pacientes.'}</p>
+              {buscando && (
+                <Button variant="secondary" className="sec__btn sec__btn--auto" onClick={() => setBusqueda('')}>
+                  Limpiar búsqueda
+                </Button>
+              )}
             </div>
           )}
         </section>
@@ -741,6 +1012,36 @@ export function SecretariaPage() {
           }}
         />
       )}
+      {modal?.tipo === 'prioridad' && (
+        <ModalPrioridad
+          admision={modal.admision}
+          onCerrar={() => setModal(null)}
+          onConfirmar={(a, motivo) =>
+            operar(
+              () => marcarPrioridad(a, motivo),
+              () => ({
+                tono: 'success',
+                titulo: motivo ? `${a.numero} tiene prioridad` : `Se quitó la prioridad de ${a.numero}`,
+                texto: motivo ? `Pasa adelante en la cola de ${a.profesional || 'su profesional'}. Quedó registrado el motivo.` : 'Vuelve a su lugar según el horario del turno.',
+              }),
+            )
+          }
+        />
+      )}
+      {modal?.tipo === 'aviso-sala' && usuario && (
+        <ModalAvisoSala
+          sucursales={usuario.sucursales}
+          sucursalActual={usuario.sucursal}
+          nombresPacientes={registros.map((r) => r.paciente)}
+          onCerrar={() => setModal(null)}
+          onConfirmar={async ({ texto, hasta, sucursal }) => {
+            publicarAviso({ texto, hasta, sucursal, usuario: yo }, registros.map((r) => r.paciente));
+            setModal(null);
+            setAhora(new Date());
+            setMensaje({ tono: 'success', titulo: 'El aviso ya se muestra en la sala', texto: `Hasta las ${hora(hasta)}.` });
+          }}
+        />
+      )}
       {modal?.tipo === 'estado-profesional' && (
         <ModalEstadoProfesional
           profesional={modal.profesional}
@@ -756,10 +1057,18 @@ export function SecretariaPage() {
 
 const capitalizar = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-type AccionesFilaProps = { admision: Admision; onDerivar: () => void; onRetiro: () => void; onReincorporar: () => void; onAnular: () => void };
+type AccionesFilaProps = {
+  admision: Admision;
+  onLlamarBox?: () => void; // DEV-44
+  onPrioridad: () => void; // DEV-49
+  onDerivar: () => void;
+  onRetiro: () => void;
+  onReincorporar: () => void;
+  onAnular: () => void;
+};
 
 /** Acciones de una fila de la cola (#58, #64, #65), en un menú para no recargar la tabla. */
-function AccionesFila({ admision, onDerivar, onRetiro, onReincorporar, onAnular }: AccionesFilaProps) {
+function AccionesFila({ admision, onLlamarBox, onPrioridad, onDerivar, onRetiro, onReincorporar, onAnular }: AccionesFilaProps) {
   const [posicion, setPosicion] = useState<{ top: number; left: number } | null>(null);
   const abierto = posicion !== null;
   const caja = useRef<HTMLDivElement>(null);
@@ -771,7 +1080,7 @@ function AccionesFila({ admision, onDerivar, onRetiro, onReincorporar, onAnular 
     const r = boton.current.getBoundingClientRect();
     if (r.bottom < 0 || r.top > window.innerHeight) return setPosicion(null); // el botón salió de la vista
     const ancho = 270;
-    const alto = 200;
+    const alto = 280;
     const left = Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8));
     const top = r.bottom + alto > window.innerHeight ? Math.max(8, r.top - alto - 4) : r.bottom + 4;
     setPosicion({ top, left });
@@ -800,7 +1109,9 @@ function AccionesFila({ admision, onDerivar, onRetiro, onReincorporar, onAnular 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierto]);
 
-  const acciones: { etiqueta: string; icono: 'swap' | 'log-out' | 'undo' | 'x-circle'; hacer: () => void; peligro?: boolean }[] = [];
+  const acciones: { etiqueta: string; icono: 'swap' | 'log-out' | 'undo' | 'x-circle' | 'flag' | 'megaphone'; hacer: () => void; peligro?: boolean }[] = [];
+  if (onLlamarBox) acciones.push({ etiqueta: 'Llamar a mi box', icono: 'megaphone', hacer: onLlamarBox });
+  if (admision.estado === 'en-espera') acciones.push({ etiqueta: admision.prioridad ? 'Cambiar o quitar prioridad' : 'Dar prioridad', icono: 'flag', hacer: onPrioridad });
   if (admision.estado === 'en-espera' && !sinProfesional(admision)) acciones.push({ etiqueta: 'Derivar a otro profesional', icono: 'swap', hacer: onDerivar });
   if (admision.estado === 'en-espera') acciones.push({ etiqueta: 'Se retiró sin ser atendido', icono: 'log-out', hacer: onRetiro });
   if (admision.estado === 'se-retiro') acciones.push({ etiqueta: 'Reincorporar a la cola', icono: 'undo', hacer: onReincorporar });

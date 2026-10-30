@@ -3,6 +3,7 @@
  * combinado con el nombre de usuario. Con el backend se usará un algoritmo lento (bcrypt o
  * Argon2) en el servidor; esto es solo para la demo.
  */
+import { sha256 } from './sha256';
 
 export const LARGO_MINIMO = 8;
 export const INTENTOS_ANTES_DE_BLOQUEO = 5;
@@ -10,8 +11,10 @@ export const MINUTOS_DE_BLOQUEO = 15;
 
 export async function resumenClave(usuario: string, clave: string): Promise<string> {
   const datos = new TextEncoder().encode(`saludplus:${usuario.trim().toLowerCase()}:${clave}`);
-  const hash = await crypto.subtle.digest('SHA-256', datos);
-  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  // crypto.subtle solo existe en localhost o con https: si la página se abre por la red con http, se calcula en JavaScript.
+  const sutil = typeof crypto !== 'undefined' ? crypto.subtle : undefined;
+  const hash = sutil ? new Uint8Array(await sutil.digest('SHA-256', datos)) : sha256(datos);
+  return [...hash].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Devuelve el motivo por el que la contraseña nueva no sirve, o null si es válida. */

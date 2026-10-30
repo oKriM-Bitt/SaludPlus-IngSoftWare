@@ -4,9 +4,10 @@ import { Icon } from '../../componentes/Icon';
 import { escucharCambios, hayConexion, obtenerSala, SinConexionError, type DatosSala } from '../../servicios/turnos';
 import { hora } from '../../utilidades/fechas';
 import { audioBloqueado, guardarSonido, habilitarAudio, sonarLlamado, sonidoActivado } from '../../servicios/sonido';
+import { sucursalDelEquipo } from '../../servicios/contexto';
+import { nombreSucursal } from '../../servicios/configuracion';
 import './sala.css';
 
-const CENTRO = 'Centro Villa Norte';
 const ACTUALIZAR_CADA_MS = 4_000;
 const AVISO_MS = 8_000;
 
@@ -94,7 +95,7 @@ export function SalaPage() {
         <span className="sala__logo">
           <Logo size={44} />
         </span>
-        <span className="sala__centro">{CENTRO} · Sala de espera</span>
+        <span className="sala__centro">{nombreSucursal(sucursalDelEquipo())} · Sala de espera</span>
         <span className="sala__derecha">
           <button type="button" className="sala__sonido" aria-pressed={sonido} onClick={cambiarSonido}>
             <Icon name={sonido ? 'volume' : 'volume-off'} size={28} />
@@ -139,6 +140,16 @@ export function SalaPage() {
                   </div>
                 ))}
               </dl>
+              {datos.avisos.length > 0 && (
+                <div className="sala__demora sala__aviso-prof" role="status">
+                  <strong>
+                    <Icon name="info" size={32} /> Aviso
+                  </strong>
+                  {datos.avisos.map((a) => (
+                    <span key={a.consultorio}>{a.texto}</span>
+                  ))}
+                </div>
+              )}
               {datos.demoras.length > 0 && (
                 <div className="sala__demora" role="status">
                   <strong>

@@ -447,3 +447,87 @@
     font-size: 17px;
   }
 }
+
+/* Pasos del ingreso: contraseña nueva y sucursal (#56, #79) */
+.ingreso__olvido {
+  display: flex;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ingreso__olvido svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ingreso__sucursales-titulo h2 {
+  color: var(--color-secondary);
+  font-size: 22px;
+}
+
+.ingreso__sucursales-titulo p {
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+}
+
+.ingreso__sucursales {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ingreso__sucursal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 72px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingreso__sucursal:hover {
+  border-color: var(--color-primary);
+  background: #eaf3fb;
+}
+
+.ingreso__sucursal > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ingreso__sucursal strong {
+  color: var(--color-secondary);
+  font-size: 17px;
+}
+
+.ingreso__sucursal span span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.ingreso__volver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+}

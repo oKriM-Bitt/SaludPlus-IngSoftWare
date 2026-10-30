@@ -6,6 +6,7 @@ import { StatusChip } from '../../componentes/StatusChip';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
 import { useUsuario } from '../../servicios/sesion';
+import { profesionalesDelDia } from '../../servicios/configuracion';
 import {
   escucharCambios,
   finalizarAtencion,
@@ -27,7 +28,6 @@ import { fechaLarga, hora, minutosEntre } from '../../utilidades/fechas';
 import { Modal } from '../secretaria/Modal';
 import './profesional.css';
 
-const CENTRO = 'Centro Villa Norte';
 const ACTUALIZAR_CADA_MS = 5_000;
 
 type Accion = 'llamando' | 'rellamando' | 'finalizando' | 'ausente';
@@ -44,10 +44,11 @@ type Pendiente = { objetivo: Admision; enAtencion: Admision | null; saltados: Ad
 export function ProfesionalPage() {
   const usuario = useUsuario();
   // El profesional ve siempre su consultorio; dirección puede elegirlo por la dirección web.
+  // Un profesional sin consultorio asignado hoy (#60) no ve la cola de otro.
   const consultorio =
-    usuario?.rol === 'profesional' && usuario.consultorio
-      ? usuario.consultorio
-      : new URLSearchParams(window.location.search).get('consultorio') ?? '4';
+    usuario?.rol === 'profesional'
+      ? usuario.consultorio ?? ''
+      : new URLSearchParams(window.location.search).get('consultorio') ?? profesionalesDelDia(usuario?.sucursal ?? 'villa-norte')[0]?.consultorio ?? '';
   const datos = profesionalPorConsultorio(consultorio);
 
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' });
@@ -496,7 +497,7 @@ export function ProfesionalPage() {
         </section>
 
         <footer className="prof__footer">
-          <span>{usuario?.centro ?? CENTRO}</span>
+          <span>{usuario?.centro}</span>
           <span>{sinConexion ? 'Datos no actualizados' : `${fechaLarga(ahora)} · ${hora(ahora)}`}</span>
         </footer>
       </main>

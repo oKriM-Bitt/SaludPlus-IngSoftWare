@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
-import { cerrarSesion, useUsuario } from '../servicios/sesion';
+import { cambiarSucursal, cerrarSesion, useUsuario } from '../servicios/sesion';
 import { destinosPorRol, ETIQUETA_ROL } from '../servicios/usuarios';
+import { nombreSucursal, profesionalesDelDia } from '../servicios/configuracion';
 
-/** Menú de navegación por rol (#48): usuario, centro, opciones permitidas y cierre de sesión. */
+/** Menú de navegación por rol (#48): usuario, sucursal (#56), opciones permitidas, contraseña (#79) y salida. */
 export function MenuUsuario() {
   const usuario = useUsuario();
   const [abierto, setAbierto] = useState(false);
@@ -34,12 +35,20 @@ export function MenuUsuario() {
   }, [abierto]);
 
   if (!usuario) return null;
-  const destinos = destinosPorRol(usuario);
+  const destinos = destinosPorRol(usuario, profesionalesDelDia(usuario.sucursal));
   const actual = pathname + search;
+  const otrasSucursales = usuario.sucursales.filter((s) => s !== usuario.sucursal);
 
   const salir = () => {
     cerrarSesion();
     navegar('/ingresar', { replace: true });
+  };
+
+  const irASucursal = (s: string) => {
+    cambiarSucursal(s);
+    setAbierto(false);
+    // El consultorio y la cola cambian con la sucursal: se vuelve al menú principal.
+    navegar('/inicio', { replace: true });
   };
 
   return (
@@ -98,6 +107,23 @@ export function MenuUsuario() {
               );
             })}
           </ul>
+
+          {otrasSucursales.length > 0 && (
+            <div className="menu__grupo">
+              <span className="menu__grupo-titulo">Cambiar de sucursal</span>
+              {otrasSucursales.map((s) => (
+                <button key={s} type="button" className="menu__item" onClick={() => irASucursal(s)}>
+                  <Icon name="building" size={22} /> {nombreSucursal(s)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="menu__grupo">
+            <Link to="/cuenta" className={`menu__item ${pathname === '/cuenta' ? 'menu__item--actual' : ''}`} onClick={() => setAbierto(false)}>
+              <Icon name="key" size={22} /> Cambiar contraseña
+            </Link>
+          </div>
           <button type="button" className="menu__item menu__salir" onClick={salir}>
             <Icon name="log-out" size={22} /> Cerrar sesión
           </button>

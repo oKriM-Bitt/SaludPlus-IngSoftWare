@@ -1,0 +1,324 @@
+/* Administración (#60, #77, #79) */
+.admin {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.admin__secciones {
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.admin__seccion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin__seccion:hover {
+  background: var(--color-surface);
+}
+
+.admin__seccion--actual {
+  border-color: var(--color-border-soft);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.admin__contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.admin__encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.admin__selector {
+  min-width: 220px;
+}
+
+.admin__sub {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.admin__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin__estado--activo {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.admin__estado--baja {
+  background: var(--color-disabled-bg);
+  color: var(--color-text-secondary);
+}
+
+.admin__estado--bloqueado {
+  background: #fdecec;
+  color: var(--color-error);
+}
+
+.admin__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+}
+
+.admin__acciones .link-boton {
+  font-size: 15px;
+}
+
+.admin__clave {
+  padding: 2px var(--space-2);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.admin__prefijo {
+  margin-left: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* Listas de elementos */
+.admin__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+}
+
+.admin__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.admin__item:last-child {
+  border-bottom: 0;
+}
+
+.admin__item--columna {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.admin__item-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.admin__item-datos {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin__item-datos strong {
+  color: var(--color-secondary);
+}
+
+.admin__item-datos span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.admin__dos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: var(--space-5);
+}
+
+.admin__bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.admin__bloque h3,
+.admin__form h3 {
+  color: var(--color-secondary);
+  font-size: 17px;
+}
+
+/* Formularios */
+.admin__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-card);
+  background: #f8fbff;
+}
+
+.admin__form--plano {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.admin__campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.admin__campos--parametros {
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}
+
+.admin__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin__checks legend {
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+}
+
+.admin__checks--fila {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+}
+
+.admin__botones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.admin__agregar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.admin__agregar .campo {
+  flex: 1 1 160px;
+}
+
+.admin__agregar .campo__error {
+  flex-basis: 100%;
+}
+
+.admin__numero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin__numero .input {
+  width: 110px;
+}
+
+.admin__numero span {
+  color: var(--color-text-secondary);
+}
+
+.admin__textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: var(--space-3);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.admin__agenda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border-soft);
+}
+
+.admin__agenda ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin__agenda li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 15px;
+}
+
+/* Tablet y celular: las secciones pasan arriba */
+@media (max-width: 900px) {
+  .admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin__secciones {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+  }
+
+  .admin__seccion {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}

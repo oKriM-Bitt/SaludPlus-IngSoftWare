@@ -428,3 +428,17 @@
     padding-block: var(--space-4);
   }
 }
+
+/* #54: elegir entre varios turnos del día */
+.totem__turno-opcion > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+}
+
+.totem__turno-opcion small {
+  color: var(--color-text-secondary);
+  font-size: clamp(16px, 2.2vw, 24px);
+  font-weight: 400;
+}

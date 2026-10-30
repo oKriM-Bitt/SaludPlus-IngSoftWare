@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluarTolerancia } from './tolerancia';
+import { evaluarLlegada, evaluarTolerancia } from './tolerancia';
 
 const turno = new Date('2026-10-19T10:00:00');
 const despues = (min: number, seg = 0) => new Date(turno.getTime() + min * 60_000 + seg * 1000);
@@ -16,5 +16,20 @@ describe('evaluarTolerancia', () => {
   });
   it('cancela con 15:01 de demora', () => {
     expect(evaluarTolerancia(turno, despues(15, 1))).toBe('vencida');
+  });
+});
+
+describe('evaluarLlegada (#75)', () => {
+  it('rechaza la llegada antes de la anticipación máxima e informa desde qué hora se acepta', () => {
+    const r = evaluarLlegada(turno, despues(-61), 15, 60);
+    expect(r.estado).toBe('muy-temprano');
+    if (r.estado === 'muy-temprano') expect(r.desde).toEqual(despues(-60));
+  });
+  it('acepta justo en el límite de anticipación', () => {
+    expect(evaluarLlegada(turno, despues(-60), 15, 60).estado).toBe('a-tiempo');
+  });
+  it('respeta la tolerancia configurada', () => {
+    expect(evaluarLlegada(turno, despues(10, 1), 10, 60).estado).toBe('vencida');
+    expect(evaluarLlegada(turno, despues(10), 10, 60).estado).toBe('a-tiempo');
   });
 });

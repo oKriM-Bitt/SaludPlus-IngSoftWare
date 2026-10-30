@@ -5,13 +5,14 @@ import { Alerta } from '../../componentes/Alerta';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { useUsuario } from '../../servicios/sesion';
 import { destinosPorRol, ETIQUETA_ROL } from '../../servicios/usuarios';
+import { profesionalesDelDia } from '../../servicios/configuracion';
 import './inicio.css';
 
 /** Menú principal (#48): muestra solo las pantallas que corresponden al rol. */
 export function InicioPage() {
   const usuario = useUsuario()!;
   const [params] = useSearchParams();
-  const destinos = destinosPorRol(usuario);
+  const destinos = destinosPorRol(usuario, profesionalesDelDia(usuario.sucursal));
 
   return (
     <div className="inicio">

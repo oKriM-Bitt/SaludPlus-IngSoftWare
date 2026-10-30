@@ -8,6 +8,8 @@ React + TypeScript + Vite. Incluye, según el diseño de Figma:
 - **Pantalla de sala de espera** `/sala` (T01–T05), para TV 1920×1080 y legible a 8 metros; también se adapta a pantallas chicas.
 - **Lámina de componentes** `/componentes`: paleta, tipografía, botones, campos, estados, alertas e íconos (manual de marca B.4).
 - **Inicio de sesión** `/ingresar` y **menú principal** `/inicio` para el personal (correcciones del 26/10: #47 y #48).
+- **Cierre del día** `/secretaria/cierre` (#69), **Reportes** `/reportes` (#78), **Administración** `/administracion` (#60, #77) y **Cambiar contraseña** `/cuenta` (#79).
+- **Varias sucursales** (#56): Centro Villa Norte (números A) y Centro Güemes (números B), cada una con su cola, sus consultorios y su sala.
 
 No hay backend ni base de datos: todo funciona con datos de ejemplo guardados en el navegador.
 
@@ -24,22 +26,23 @@ npm run dev
 Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (`/totem`) y la sala (`/sala`) se abren sin usuario.
 
 - `npm run build`: compila para producción (carpeta `dist/`).
-- `npm test`: corre las pruebas (tolerancia, tiempos de espera, usuarios y permisos, llamado fuera de orden y atajos de teclado).
+- `npm test`: corre las pruebas (tolerancia y llegada anticipada, tiempos de espera, usuarios, contraseñas y permisos, configuración y agenda, resúmenes y reportes, llamado fuera de orden y atajos de teclado).
 
 ## Usuarios de prueba (ficticios)
 
 Contraseña para todos: `saludplus`. En la pantalla de ingreso, los botones "Admisión", "Profesional" y "Dirección" cargan un usuario de prueba con un toque, y "Ver todos los usuarios de prueba" muestra la lista completa.
 
-| Usuario | Rol | Qué ve en el menú |
-|---|---|---|
-| `jbenitez` | Admisión (secretaría) | Admisión y sala de espera; abre el tótem y la sala en otra pestaña |
-| `lferrer` | Profesional, consultorio 4 | Su consultorio y la pantalla de sala |
-| `tvidal` | Profesional, consultorio 2 | Ídem |
-| `prios` | Profesional, consultorio 6 | Ídem |
-| `direccion` | Dirección | Todas las pantallas, incluidos los tres consultorios |
+| Usuario | Rol | Sucursal | Qué ve en el menú |
+|---|---|---|---|
+| `jbenitez` | Admisión (secretaría) | Villa Norte | Admisión, cierre del día y abrir el tótem y la sala de su sucursal |
+| `mcastro` | Admisión (secretaría) | Villa Norte y Güemes | Ídem; elige la sucursal al ingresar y puede cambiarla desde el menú |
+| `lferrer`, `tvidal`, `prios`, `aluna` | Profesional | Villa Norte (consultorios 4, 2, 6 y 8) | Solo su consultorio (#59: la sala es un equipo de la sucursal, no una herramienta del médico) |
+| `maguirre`, `isosa` | Profesional | Güemes (consultorios 1 y 3) | Ídem |
+| `direccion` | Dirección | Las dos | Todo, más reportes y administración |
 
 - Cada rol abre solo sus pantallas: si una secretaria entra a `/profesional`, vuelve al menú con un aviso.
-- La sesión se cierra sola después de 15 minutos sin uso y desde el menú con "Cerrar sesión".
+- La sesión se cierra sola después de 15 minutos sin uso (configurable) y desde el menú con "Cerrar sesión".
+- **Contraseñas (#79):** se guarda solo su resumen SHA-256, nunca el texto. Después de 5 intentos fallidos el usuario se bloquea 15 minutos. Dirección puede restablecerla (da una temporal que hay que cambiar al ingresar) o desbloquear al usuario. Cada uno la cambia desde el menú, en "Cambiar contraseña".
 - `/ingresar?error=1` simula una falla del servicio de ingreso.
 
 ## Datos de demostración (ficticios)
@@ -54,7 +57,14 @@ El proveedor de turnos está **simulado** en `src/servicios/turnos.ts`. Los hora
 | 33888999 | 100200303 | Falla el primer registro (**Error de registro**); al tocar Reintentar, funciona |
 | 27123456 | | Afiliada **sin turno** (Elena T.): para probar "No tengo turno" |
 | 31555666 | | Afiliado **sin turno** (Pablo Q.) |
+| 29777888 | 100200310 | **Dos turnos hoy** (Luis M., Cardiología y Clínica médica): elige a cuál llegó; registrar uno no marca el otro (#54) |
+| | 100200500 | **Afiliado del grupo familiar** compartido por Elsa F. (año 1958) y Tomás F. (año 2014): el tótem pide el año de nacimiento (#54) |
+| 26444333 | 100200320 | Turno dentro de 2 h 30: **muy temprano**, informa desde qué hora puede registrarse (#75) |
+| 24111333 | 100200330 | Turno en **Centro Güemes**: en Villa Norte avisa que es en otra sucursal (#56) |
+| 35222444 | 100200331 | Turno en Centro Güemes (Pediatría) |
 | cualquier otro | | Turno no encontrado / afiliado no encontrado |
+
+Para usar el tótem o la sala de otra sucursal, abrilos una vez con `?sucursal=guemes` (o `villa-norte`): el equipo la recuerda. Desde Administración → Sucursales están los enlaces.
 
 ### Tótem: con turno y sin turno (DEV-32 y DEV-33)
 
@@ -118,6 +128,19 @@ Para volver la demo al estado inicial, agregá `?reset=1` a cualquier dirección
 
 La cola se guarda en el navegador (localStorage) para que el tótem y el profesional compartan datos entre pestañas. Con el backend NestJS esto pasará al servidor.
 
+### Operación de la secretaría (#54, #58, #63, #64, #65, #69)
+
+- **Acciones** de cada fila: **Derivar a otro profesional** (propone primero la misma especialidad; conserva el número y la espera), **Se retiró sin ser atendido** y luego **Reincorporar**, y **Anular llegada** si se registró por error (el turno vuelve a quedar disponible). Todo queda en la auditoría.
+- **Profesionales de hoy:** marcar a un profesional como **demorado** (con minutos) o **ausente**, y derivar en un paso a todos sus pacientes. La sala muestra el aviso sin datos de pacientes.
+- **Pacientes con más de un turno hoy** se marcan en la tabla.
+- **Cierre del día:** lista los pendientes para darles estado final (no atendido o reprogramado por el proveedor), pide confirmación y genera el resumen (atendidos, ausentes, abandonos, espera promedio, por especialidad). Después del cierre no se registran llegadas, ni en el tótem ni en secretaría. Dirección puede reabrir el día. El resumen se descarga en CSV.
+
+### Dirección (#60, #77, #78)
+
+- **Administración:** usuarios (alta, edición, baja, contraseña temporal, desbloqueo), sucursales y sus equipos, consultorios y boxes, profesionales y su agenda (consultorio, días y horario, sin superposiciones), **parámetros** y **auditoría**. Nada se borra: se da de baja.
+- **Parámetros configurables:** tolerancia, minutos por consulta, espera larga, cierre de sesión, desde cuánto antes se acepta la llegada, llamados antes de marcar ausente y motivos de prioridad. Se validan, se aplican sin recargar y se pueden restaurar.
+- **Reportes:** por sucursal (o todas), especialidad y período (hoy, 7 o 30 días), con exportación a Excel (CSV con punto y coma). Hoy usa los datos en vivo; los días anteriores son simulados para la demo. No incluye nombres ni datos de salud.
+
 ## Reglas implementadas
 
 - **Tolerancia de 15 minutos (RF-07):** hasta 15:00 de demora se acepta; desde 15:01 el turno queda cancelado y el tótem deriva a secretaría para un contraturno (`src/servicios/tolerancia.ts`, con pruebas).
@@ -151,12 +174,17 @@ src/
     profesional/    03 Vista del profesional (P01–P06)
     sala/           04 Pantalla de sala de espera (T01–T05)
     lamina/         05 Lámina de componentes reutilizables
-    ingreso/        Inicio de sesión del personal
+    ingreso/        Inicio de sesión del personal (credenciales, contraseña nueva y sucursal)
     inicio/         Menú principal según el rol
-  componentes/      Piezas compartidas: Logo, Icon, Button, StatusChip, Alerta, MenuUsuario, TiempoEspera, RutaProtegida
+    cierre/         Cierre del día (#69)
+    reportes/       Reportes y exportación (#78)
+    administracion/ Usuarios, sucursales, consultorios, profesionales, parámetros y auditoría (#60, #77)
+    cuenta/         Cambiar contraseña (#79)
+  componentes/      Piezas compartidas: Logo, Icon, Button, StatusChip, Alerta, MenuUsuario, TiempoEspera, RutaProtegida, PaginaInterna, FormularioClave
   estilos/          Tokens del manual de marca, estilos globales y de componentes
-  servicios/        Turnos y cola simulados, tolerancia, espera, llamados y atajos, sesión, usuarios y sonido (con pruebas)
-  utilidades/       Formato de horas y fechas
+  servicios/        Turnos y cola simulados, configuración, sucursal activa, sesión, usuarios y contraseñas,
+                    tolerancia y llegada, espera, llamados y atajos, auditoría, reportes y sonido (con pruebas)
+  utilidades/       Formato de horas y fechas, descarga de archivos
   App.tsx           Rutas de cada pantalla
   main.tsx          Punto de entrada
 ```

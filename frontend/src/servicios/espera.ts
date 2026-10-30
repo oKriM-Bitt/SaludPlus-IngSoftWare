@@ -1,17 +1,23 @@
-/** Cálculo de tiempos de espera (#46). Funciones puras: se prueban sin navegador. */
+/** Cálculo de tiempos de espera (#46). Los minutos se configuran en Administración (#77). */
+import { escucharConfiguracion, parametros } from './configuracion';
 
-/** Minutos promedio por consulta usados para estimar la espera (valor a acordar con SaludPlus). */
-export const MINUTOS_POR_CONSULTA = 10;
+/** Minutos promedio por consulta usados para estimar la espera (por defecto 10). */
+export let MINUTOS_POR_CONSULTA = parametros().minutosPorConsulta;
 
-/** A partir de estos minutos la espera se destaca en todas las pantallas. */
-export const ESPERA_LARGA_MINUTOS = 30;
+/** A partir de estos minutos la espera se destaca en todas las pantallas (por defecto 30). */
+export let ESPERA_LARGA_MINUTOS = parametros().esperaLargaMinutos;
+
+escucharConfiguracion(() => {
+  MINUTOS_POR_CONSULTA = parametros().minutosPorConsulta;
+  ESPERA_LARGA_MINUTOS = parametros().esperaLargaMinutos;
+});
 
 /**
  * Espera estimada para un paciente según cuántos tiene adelante en el mismo consultorio.
  * Si el profesional está atendiendo, se suma media consulta.
  */
 export function estimarEspera(pacientesAntes: number, hayEnAtencion: boolean): number {
-  return Math.max(0, pacientesAntes) * MINUTOS_POR_CONSULTA + (hayEnAtencion ? MINUTOS_POR_CONSULTA / 2 : 0);
+  return Math.max(0, pacientesAntes) * MINUTOS_POR_CONSULTA + (hayEnAtencion ? Math.round(MINUTOS_POR_CONSULTA / 2) : 0);
 }
 
 export const esEsperaLarga = (minutos: number) => minutos >= ESPERA_LARGA_MINUTOS;

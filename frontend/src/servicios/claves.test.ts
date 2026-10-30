@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { claveTemporal, minutosDeBloqueo, problemaConClave, resumenClave, sha256 } from './claves';
+import { claveTemporal, minutosDeBloqueo, problemaConClave, resumenClave } from './claves';
+import { sha256 } from './sha256';
 import { configuracionInicial } from './configuracion';
 
 describe('contraseñas (#79)', () => {

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { TotemPage } from './pantallas/totem/TotemPage';
 import { ProfesionalPage } from './pantallas/profesional/ProfesionalPage';
 import { SecretariaPage } from './pantallas/secretaria/SecretariaPage';
@@ -11,10 +11,14 @@ import { CuentaPage } from './pantallas/cuenta/CuentaPage';
 import { CierrePage } from './pantallas/cierre/CierrePage';
 import { ReportesPage } from './pantallas/reportes/ReportesPage';
 import { AdministracionPage } from './pantallas/administracion/AdministracionPage';
+import { MODO_ARCHIVO } from './utilidades/rutas';
+
+/** En la demo de un solo archivo las rutas van después de # (ver utilidades/rutas.ts). */
+const Router = MODO_ARCHIVO ? HashRouter : BrowserRouter;
 
 export function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         {/* Públicas: equipos del centro sin usuario */}
         <Route path="/totem" element={<TotemPage />} />
@@ -33,6 +37,6 @@ export function App() {
 
         <Route path="*" element={<Navigate to="/inicio" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }

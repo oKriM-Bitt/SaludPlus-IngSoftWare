@@ -2,6 +2,8 @@
  * Lectura y escritura en localStorage con respaldo en memoria.
  * Funciona también en las pruebas (Node), donde no hay localStorage.
  */
+import { ubicacionActual } from '../utilidades/rutas';
+
 const memoria = new Map<string, string>();
 
 function almacenamiento(): Storage | null {
@@ -53,7 +55,7 @@ export function escucharClaves(claves: string[], alCambiar: () => void): () => v
 /** Parámetro de la dirección web actual (vacío en las pruebas). */
 export function parametroURL(nombre: string): string | null {
   if (typeof window === 'undefined') return null;
-  return new URLSearchParams(window.location.search).get(nombre);
+  return new URLSearchParams(ubicacionActual().search).get(nombre);
 }
 
 /** Fecha local del día en formato AAAA-MM-DD. */

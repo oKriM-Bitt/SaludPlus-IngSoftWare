@@ -6,6 +6,7 @@ import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { useUsuario } from '../../servicios/sesion';
 import { destinosPorRol, ETIQUETA_ROL } from '../../servicios/usuarios';
 import { profesionalesDelDia } from '../../servicios/configuracion';
+import { enlace } from '../../utilidades/rutas';
 import './inicio.css';
 
 /** Menú principal (#48): muestra solo las pantallas que corresponden al rol. */
@@ -49,7 +50,7 @@ export function InicioPage() {
             return (
               <li key={d.ruta}>
                 {d.nuevaPestana ? (
-                  <a className="inicio__opcion" href={d.ruta} target="_blank" rel="noreferrer">
+                  <a className="inicio__opcion" href={enlace(d.ruta)} target="_blank" rel="noreferrer">
                     {contenido}
                     <span className="visually-hidden">(se abre en otra pestaña)</span>
                   </a>

@@ -7,12 +7,13 @@
 import { escribirJSON, leerJSON, parametroURL } from './almacen';
 import { sucursalesActivas, sucursalPorId } from './configuracion';
 import { usuarioActual } from './sesion';
+import { ubicacionActual } from '../utilidades/rutas';
 
 const CLAVE_EQUIPO = 'saludplus.equipo.sucursal';
 
 function esPantallaDeEquipo() {
   if (typeof window === 'undefined') return false;
-  const ruta = window.location.pathname;
+  const ruta = ubicacionActual().pathname;
   return ruta.startsWith('/totem') || ruta.startsWith('/sala');
 }
 

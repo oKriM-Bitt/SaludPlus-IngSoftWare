@@ -4,6 +4,7 @@ import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import type { Sucursal } from '../../servicios/configuracion';
 import { cambiar, slug } from './cambios';
+import { enlace } from '../../utilidades/rutas';
 import { Estado, useConfiguracion } from './comun';
 
 /** #56 y #60: sucursales, con los enlaces para configurar el tótem y la sala de cada una. */
@@ -47,10 +48,10 @@ export function SeccionSucursales() {
             <span className="admin__acciones">
               {s.activa && (
                 <>
-                  <a className="link-boton" href={`/totem?sucursal=${s.id}`} target="_blank" rel="noreferrer">
+                  <a className="link-boton" href={enlace(`/totem?sucursal=${s.id}`)} target="_blank" rel="noreferrer">
                     <Icon name="hand" size={18} /> Abrir tótem
                   </a>
-                  <a className="link-boton" href={`/sala?sucursal=${s.id}`} target="_blank" rel="noreferrer">
+                  <a className="link-boton" href={enlace(`/sala?sucursal=${s.id}`)} target="_blank" rel="noreferrer">
                     <Icon name="monitor" size={18} /> Abrir sala
                   </a>
                 </>

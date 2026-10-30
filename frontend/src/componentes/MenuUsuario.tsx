@@ -4,6 +4,7 @@ import { Icon } from './Icon';
 import { cambiarSucursal, cerrarSesion, useUsuario } from '../servicios/sesion';
 import { destinosPorRol, ETIQUETA_ROL } from '../servicios/usuarios';
 import { nombreSucursal, profesionalesDelDia } from '../servicios/configuracion';
+import { enlace } from '../utilidades/rutas';
 
 /** Menú de navegación por rol (#48): usuario, sucursal (#56), opciones permitidas, contraseña (#79) y salida. */
 export function MenuUsuario() {
@@ -93,7 +94,7 @@ export function MenuUsuario() {
               return (
                 <li key={d.ruta}>
                   {d.nuevaPestana ? (
-                    <a className="menu__item" href={d.ruta} target="_blank" rel="noreferrer" onClick={() => setAbierto(false)}>
+                    <a className="menu__item" href={enlace(d.ruta)} target="_blank" rel="noreferrer" onClick={() => setAbierto(false)}>
                       <Icon name={d.icono} size={22} /> {d.titulo}
                       <Icon name="external" size={18} className="menu__externo" />
                       <span className="visually-hidden">(se abre en otra pestaña)</span>

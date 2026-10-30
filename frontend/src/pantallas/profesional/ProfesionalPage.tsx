@@ -7,6 +7,7 @@ import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
 import { useUsuario } from '../../servicios/sesion';
 import { profesionalesDelDia } from '../../servicios/configuracion';
+import { ubicacionActual } from '../../utilidades/rutas';
 import {
   escucharCambios,
   finalizarAtencion,
@@ -48,7 +49,7 @@ export function ProfesionalPage() {
   const consultorio =
     usuario?.rol === 'profesional'
       ? usuario.consultorio ?? ''
-      : new URLSearchParams(window.location.search).get('consultorio') ?? profesionalesDelDia(usuario?.sucursal ?? 'villa-norte')[0]?.consultorio ?? '';
+      : new URLSearchParams(ubicacionActual().search).get('consultorio') ?? profesionalesDelDia(usuario?.sucursal ?? 'villa-norte')[0]?.consultorio ?? '';
   const datos = profesionalPorConsultorio(consultorio);
 
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' });

@@ -26,6 +26,9 @@ npm run dev
 Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (`/totem`) y la sala (`/sala`) se abren sin usuario.
 
 - `npm run build`: compila para producción (carpeta `dist/`).
+- `npm run build:demo`: arma la **demo en un solo archivo** (`dist-demo/index.html`) que se abre con doble clic, **sin Node ni servidor**. En esa versión las direcciones llevan `#` (por ejemplo `index.html#/totem?sucursal=guemes`). Los datos se guardan en el navegador de esa computadora.
+
+> Si el ingreso dice "No pudimos iniciar sesión" al abrir la página desde otra computadora o el celular (`http://192.168…:5173`), actualizá a la última versión de `main`: ya funciona también por la red.
 - `npm test`: corre las pruebas (tolerancia y llegada anticipada, tiempos de espera, usuarios, contraseñas y permisos, configuración y agenda, resúmenes y reportes, llamado fuera de orden y atajos de teclado).
 
 ## Usuarios de prueba (ficticios)

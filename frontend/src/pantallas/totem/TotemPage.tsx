@@ -22,6 +22,7 @@ import { Stepper, type PasoStepper } from './Stepper';
 import { Keypad } from './Keypad';
 import { TurnoDetalle } from './TurnoDetalle';
 import { ResultCard } from './ResultCard';
+import { AccionesRegistro } from './AccionesRegistro';
 import './totem.css';
 
 const MAX_DIGITOS = 11;
@@ -51,7 +52,8 @@ type Paso =
   | { id: 'K17-varios-turnos'; turnos: Turno[]; registrados: Admision[] } // #54
   | { id: 'K18-otra-sucursal'; turno: Turno; sucursal: string } // #56
   | { id: 'K19-muy-temprano'; turno: Turno; desde: Date } // #75
-  | { id: 'K20-dia-cerrado' }; // #69
+  | { id: 'K20-dia-cerrado' } // #69
+  | { id: 'K21-deshecho'; numero: string }; // DEV-53: tocó "Me equivoqué"
 
 const pasoDelStepper: Record<Paso['id'], PasoStepper | null> = {
   'K01-bienvenida': null,
@@ -74,6 +76,7 @@ const pasoDelStepper: Record<Paso['id'], PasoStepper | null> = {
   'K18-otra-sucursal': 4,
   'K19-muy-temprano': 4,
   'K20-dia-cerrado': 4,
+  'K21-deshecho': null,
 };
 
 /** Pantallas en las que el tótem espera una respuesta: no vuelve solo al inicio. */
@@ -437,8 +440,8 @@ export function TotemPage() {
               <Button loading={buscando} onClick={seguirConMiTurno}>
                 Continuar con mi turno
               </Button>
-              <Button variant="secondary" disabled={buscando} onClick={reiniciar}>
-                Volver al inicio
+              <Button variant="secondary" disabled={buscando} onClick={() => setPaso({ id: 'K02-ingreso' })}>
+                Volver
               </Button>
             </div>
           </Resultado>
@@ -487,7 +490,21 @@ export function TotemPage() {
           <Resultado tituloRef={tituloRef} icon="check-circle" tono="success" titulo="Llegada registrada">
             <ResultCard admision={paso.admision} />
             <p className="totem__lead totem__lead--dark">Diríjase a la sala de espera y mire la pantalla de llamados.</p>
-            <Button onClick={reiniciar}>Volver al inicio</Button>
+            <AccionesRegistro key={paso.admision.turnoId} admision={paso.admision} recienRegistrada onDeshecho={() => setPaso({ id: 'K21-deshecho', numero: paso.admision.numero })} />
+            <Button onClick={reiniciar}>Listo, volver al inicio</Button>
+          </Resultado>
+        );
+
+      case 'K21-deshecho':
+        return (
+          <Resultado tituloRef={tituloRef} icon="undo" tono="success" titulo="Anulamos su registro">
+            <p className="totem__lead totem__lead--dark">El número {paso.numero} quedó sin efecto. Puede registrarse de nuevo eligiendo bien su servicio y su turno.</p>
+            <div className="totem__opciones">
+              <Button onClick={() => setPaso({ id: 'K11-servicio' })}>Registrarme de nuevo</Button>
+              <Button variant="secondary" onClick={reiniciar}>
+                Volver al inicio
+              </Button>
+            </div>
           </Resultado>
         );
 
@@ -498,6 +515,7 @@ export function TotemPage() {
             <p className="totem__lead totem__lead--dark">
               Su llegada ya estaba registrada. Su número es {paso.admision.numero}.
             </p>
+            <AccionesRegistro key={paso.admision.turnoId} admision={paso.admision} recienRegistrada={false} onDeshecho={reiniciar} />
             <Button onClick={reiniciar}>Volver al inicio</Button>
           </Resultado>
         );

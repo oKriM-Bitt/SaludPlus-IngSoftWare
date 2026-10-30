@@ -606,3 +606,125 @@
 .link-boton--peligro {
   color: var(--color-error);
 }
+
+/* DEV-49: marca de prioridad de atención */
+.prioridad {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid #7c3aed;
+  border-radius: 999px;
+  background: #f5f3ff;
+  color: #5b21b6;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.prioridad svg {
+  flex-shrink: 0;
+}
+
+/* DEV-57: estado de un turno del día */
+.estado-turno {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado-turno--en-espera,
+.estado-turno--en-atencion {
+  border-color: var(--color-primary);
+  background: #eaf3fb;
+  color: var(--color-secondary);
+}
+
+.estado-turno--atendido {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.estado-turno--ausente,
+.estado-turno--se-retiro {
+  border-color: var(--color-error);
+  background: #fef2f2;
+  color: var(--color-error);
+}
+
+.estado-turno--pendiente {
+  border-style: dashed;
+}
+
+/* DEV-60: elegir el consultorio del día */
+.elegir-consultorio {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.elegir-consultorio__opcion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.elegir-consultorio__opcion > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.elegir-consultorio__opcion strong {
+  color: var(--color-secondary);
+  font-size: 18px;
+}
+
+.elegir-consultorio__opcion > span > span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.elegir-consultorio__opcion--propuesto {
+  border: 2px solid var(--color-primary);
+  background: #f3f8fd;
+}
+
+.elegir-consultorio__opcion:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.elegir-consultorio__opcion:disabled {
+  cursor: not-allowed;
+  background: var(--color-disabled-bg);
+  opacity: 0.8;
+}
+
+.menu__detalle {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}

@@ -12,7 +12,20 @@ import { evaluarLlegada, evaluarTolerancia, TOLERANCIA_MINUTOS } from './toleran
 import { estimarEspera, MINUTOS_POR_CONSULTA } from './espera';
 import { pacientesSaltados } from './llamados';
 import { borrar, escribirJSON, escucharClaves, hoy, leerJSON, parametroURL } from './almacen';
-import { escucharConfiguracion, nombreSucursal, parametros, profesionalesDelDia, sucursalPorId } from './configuracion';
+import {
+  configuracion,
+  consultorioDeAgenda,
+  consultorioElegido,
+  consultoriosDeSucursal,
+  escucharConfiguracion,
+  guardarConsultorioElegido,
+  nombreSucursal,
+  parametros,
+  profesionalesDelDia,
+  sucursalPorId,
+  type Consultorio,
+} from './configuracion';
+import { avisosVigentes, CLAVE_AVISOS } from './avisos';
 import { CLAVE_AUDITORIA, obtenerAuditoria, registrarAuditoria, type RegistroAuditoria } from './auditoria';
 import { quienSoy, sucursalActiva } from './contexto';
 import { escucharSesion } from './sesion';
@@ -73,10 +86,23 @@ export type EstadoAdmision =
   | 'se-retiro' // #64
   | 'no-atendido' // #69: quedó pendiente al cerrar el día
   | 'reprogramado'; // #69: el proveedor le dio otro turno
-export type TipoAdmision = 'turno' | 'demanda' | 'contraturno';
+export type TipoAdmision = 'turno' | 'demanda' | 'contraturno' | 'derivacion'; // DEV-59: derivado desde el consultorio
 
 /** #58: registro de cada derivación o asignación de profesional. */
 export type Derivacion = { desde: string; hacia: string; motivo: string; fecha: string; usuario: string };
+
+/** DEV-49: prioridad de atención que marca la secretaría. El motivo nunca se muestra en la sala. */
+export type Prioridad = { motivo: string; usuario: string; fecha: string };
+
+/** DEV-44: atención en un box de admisión antes de pasar al consultorio. */
+export type AtencionBox = {
+  numero: string; // número de box
+  estado: 'llamado' | 'finalizado' | 'ausente';
+  llamadoEn: string;
+  llamados: number;
+  usuario: string;
+  finalizadoEn?: string;
+};
 
 export type Admision = {
   numero: string;
@@ -102,6 +128,9 @@ export type Admision = {
   retiradoEn?: string; // #64
   motivoRetiro?: string; // #64
   finalizadoEn?: string; // ISO
+  prioridad?: Prioridad; // DEV-49
+  box?: AtencionBox; // DEV-44
+  derivadaDe?: string; // DEV-59: turnoId de la atención que la derivó
 };
 
 /** DEV-33: una demanda espontánea del tótem queda sin profesional hasta que la secretaría lo asigna. */
@@ -184,6 +213,14 @@ export class PacienteEnAtencionError extends Error {
   }
 }
 
+/** DEV-58: el consultorio está en pausa; no se puede llamar hasta reanudar. */
+export class ConsultorioEnPausaError extends Error {
+  constructor() {
+    super('El consultorio está en pausa');
+    this.name = 'ConsultorioEnPausaError';
+  }
+}
+
 /** #42: el paciente elegido ya no está en espera (lo llamó otro equipo o cambió su estado). */
 export class PacienteNoDisponibleError extends Error {
   constructor() {
@@ -253,7 +290,9 @@ export function turnosHoyDe(documento: string | undefined): number {
 
 /** Pacientes que ya estaban en el centro al abrir la demo. */
 function admisionesIniciales(): Record<string, Admision> {
-  const consultorioDe = (profesional: string, sucursal: string) => profesionalesDelDia(sucursal).find((p) => p.nombre === profesional)?.consultorio ?? '';
+  // Consultorio de la agenda: los llamados ya hechos no cambian si el profesional rota después (DEV-60).
+  // A los que esperan los mueve elegirConsultorio, que los guarda con el consultorio nuevo.
+  const consultorioDe = (profesional: string, sucursal: string) => profesionalesDelDia(sucursal, new Date(), false).find((p) => p.nombre === profesional)?.consultorio ?? '';
   const a = (turnoId: string, numero: string, paciente: string, profesional: string, turnoMin: number, llegadaMin: number, extra: Partial<Admision> = {}): Admision => {
     const sucursal = extra.sucursal ?? PRIMERA_SUCURSAL;
     return {
@@ -311,6 +350,8 @@ const fallasPendientes = new Set(['t-4']);
 const CLAVE = 'saludplus.admisiones';
 const CLAVE_ESTADOS = 'saludplus.profesionales.estado';
 const CLAVE_CIERRES = 'saludplus.cierres';
+const CLAVE_PAUSAS = 'saludplus.pausas'; // DEV-58
+const CLAVE_BOXES = 'saludplus.boxes.dia'; // DEV-44
 let memoria: Record<string, Admision> = admisionesIniciales();
 
 // Si cambia la agenda, los pacientes de la demo toman el consultorio nuevo.
@@ -324,7 +365,7 @@ function parametro(nombre: string) {
 
 // ?reset=1 vuelve la demo a su estado inicial.
 if (parametro('reset') === '1') {
-  [CLAVE, CLAVE_ESTADOS, CLAVE_CIERRES, CLAVE_AUDITORIA].forEach(borrar);
+  [CLAVE, CLAVE_ESTADOS, CLAVE_CIERRES, CLAVE_AUDITORIA, CLAVE_PAUSAS, CLAVE_BOXES].forEach(borrar);
 }
 
 const CLAVE_ANULADAS = 'saludplus.anuladas';
@@ -814,16 +855,31 @@ export async function derivarTodos(desde: string, hacia: string, motivo: string)
 
 // ---------- Pantalla de sala de espera ----------
 
-export type Llamado = { numero: string; consultorio: string; llamadoEn: string; llamados: number };
+/** Un llamado en la sala: a un consultorio o a un box de admisión (DEV-44). */
+export type Llamado = { numero: string; lugar: 'consultorio' | 'box'; destino: string; llamadoEn: string; llamados: number };
 
 export type DatosSala = {
   actual: Llamado | null;
   anteriores: Llamado[]; // hasta 4, del más reciente al más antiguo
   esperas: { especialidad: string; minutos: number }[];
   demoras: { especialidad: string; minutos: number }[];
-  avisos: { consultorio: string; texto: string }[]; // #63: profesional ausente o demorado
+  avisos: { consultorio: string; texto: string }[]; // #63 y DEV-58: profesional ausente, demorado o en pausa
+  generales: { id: string; texto: string }[]; // DEV-55: avisos de la secretaría
   actualizadoEn: Date;
 };
+
+/** "Consultorio 4" o "Box 1". */
+export const textoDestino = (l: Pick<Llamado, 'lugar' | 'destino'>) => `${l.lugar === 'box' ? 'Box' : 'Consultorio'} ${l.destino}`;
+
+/** Todos los llamados del día: a consultorio y a box, del más reciente al más antiguo. */
+function llamadosDe(admisiones: Admision[]): Llamado[] {
+  const lista: Llamado[] = [];
+  for (const a of admisiones) {
+    if (a.llamadoEn) lista.push({ numero: a.numero, lugar: 'consultorio', destino: a.consultorio, llamadoEn: a.llamadoEn, llamados: a.llamados ?? 1 });
+    if (a.box) lista.push({ numero: a.numero, lugar: 'box', destino: a.box.numero, llamadoEn: a.box.llamadoEn, llamados: a.box.llamados });
+  }
+  return lista.sort((x, y) => y.llamadoEn.localeCompare(x.llamadoEn));
+}
 
 /** La sala muestra solo número y consultorio: nunca nombres ni datos de salud. */
 export async function obtenerSala(ahora = new Date()): Promise<DatosSala> {
@@ -832,43 +888,53 @@ export async function obtenerSala(ahora = new Date()): Promise<DatosSala> {
   verificarServicio();
   refrescarProfesionales();
   const todas = Object.values(admisionesVigentes());
-  const llamados: Llamado[] = todas
-    .filter((a) => a.llamadoEn)
-    .sort((a, b) => b.llamadoEn!.localeCompare(a.llamadoEn!))
-    .map((a) => ({ numero: a.numero, consultorio: a.consultorio, llamadoEn: a.llamadoEn!, llamados: a.llamados ?? 1 }));
+  const llamados = llamadosDe(todas);
   const repetidas = (esp: string) => PROFESIONALES.filter((p) => p.especialidad === esp).length > 1;
   const etiqueta = (p: Profesional) => (repetidas(p.especialidad) ? `${p.especialidad} · consultorio ${p.consultorio}` : p.especialidad);
   const estados = estadosProfesionales();
+  const pausas = pausasDeHoy();
   const esperas = PROFESIONALES.filter((p) => estados[p.nombre]?.estado !== 'ausente').map((p) => ({
     especialidad: etiqueta(p),
     minutos:
       estimarEspera(
         todas.filter((a) => a.profesional === p.nombre && a.estado === 'en-espera').length,
         todas.some((a) => a.profesional === p.nombre && a.estado === 'llamado'),
-      ) + (estados[p.nombre]?.estado === 'demorado' ? estados[p.nombre].minutos ?? 0 : 0),
+      ) +
+      (estados[p.nombre]?.estado === 'demorado' ? estados[p.nombre].minutos ?? 0 : 0) +
+      (pausas[p.nombre] ? minutosRestantesPausa(pausas[p.nombre], ahora) : 0), // DEV-58
   }));
   const demoras = calcularDemoras(todas, ahora)
-    .filter((d) => !estados[d.profesional])
+    .filter((d) => !estados[d.profesional] && !pausas[d.profesional])
     .map((d) => ({ especialidad: etiqueta(profesionalPorNombre(d.profesional)), minutos: d.minutos }));
-  const avisos = PROFESIONALES.filter((p) => estados[p.nombre]).map((p) => {
+  const avisos = PROFESIONALES.filter((p) => estados[p.nombre] || pausas[p.nombre]).map((p) => {
     const e = estados[p.nombre];
+    const pausa = pausas[p.nombre];
     return {
       consultorio: p.consultorio,
       texto:
-        e.estado === 'ausente'
+        e?.estado === 'ausente'
           ? `Consultorio ${p.consultorio} (${p.especialidad}): hoy no atiende. Los pacientes serán reasignados; consulte en secretaría.`
-          : `Consultorio ${p.consultorio} (${p.especialidad}): demora estimada de ${e.minutos ?? 0} minutos.`,
+          : pausa
+            ? textoPausaSala(p.consultorio, minutosRestantesPausa(pausa, ahora))
+            : `Consultorio ${p.consultorio} (${p.especialidad}): demora estimada de ${e?.minutos ?? 0} minutos.`,
     };
   });
-  return { actual: llamados[0] ?? null, anteriores: llamados.slice(1, 5), esperas, demoras, avisos, actualizadoEn: new Date() };
+  const generales = avisosVigentes(sucursalActiva(), ahora).map((a) => ({ id: a.id, texto: a.texto }));
+  return { actual: llamados[0] ?? null, anteriores: llamados.slice(1, 5), esperas, demoras, avisos, generales, actualizadoEn: new Date() };
 }
 
 // ---------- Vista del profesional ----------
 
-/** Orden de atención: por horario del turno y, si empatan, por llegada. */
-function ordenarCola(a: Admision, b: Admision) {
-  return a.horaTurno.localeCompare(b.horaTurno) || a.registradaEn.localeCompare(b.registradaEn);
+/**
+ * Orden de atención: primero los pacientes con prioridad (DEV-49), después por horario del
+ * turno y, si empatan, por llegada.
+ */
+export function ordenarCola(a: Pick<Admision, 'horaTurno' | 'registradaEn' | 'prioridad'>, b: Pick<Admision, 'horaTurno' | 'registradaEn' | 'prioridad'>) {
+  return Number(!!b.prioridad) - Number(!!a.prioridad) || a.horaTurno.localeCompare(b.horaTurno) || a.registradaEn.localeCompare(b.registradaEn);
 }
+
+/** DEV-44: mientras está en un box de admisión, el profesional no lo puede llamar. */
+export const enBoxAhora = (a: Admision) => a.box?.estado === 'llamado';
 
 export async function obtenerCola(consultorio: string): Promise<ColaConsultorio> {
   verificarConexion();
@@ -876,7 +942,7 @@ export async function obtenerCola(consultorio: string): Promise<ColaConsultorio>
   verificarServicio();
   const delConsultorio = Object.values(admisionesVigentes()).filter((a) => a.consultorio === consultorio);
   return {
-    enEspera: delConsultorio.filter((a) => a.estado === 'en-espera').sort(ordenarCola),
+    enEspera: delConsultorio.filter((a) => a.estado === 'en-espera' && !enBoxAhora(a)).sort(ordenarCola),
     enAtencion: delConsultorio.find((a) => a.estado === 'llamado') ?? null,
     actualizadoEn: new Date(),
   };
@@ -886,6 +952,7 @@ export async function obtenerCola(consultorio: string): Promise<ColaConsultorio>
 export async function llamarSiguiente(consultorio: string): Promise<Admision> {
   verificarConexion();
   await esperar(500);
+  verificarSinPausa(consultorio);
   const cola = await obtenerCola(consultorio);
   if (cola.enAtencion) return cola.enAtencion;
   const siguiente = cola.enEspera[0];
@@ -902,6 +969,7 @@ export async function llamarSiguiente(consultorio: string): Promise<Admision> {
 export async function llamarPaciente(consultorio: string, turnoId: string, usuario: string): Promise<Admision> {
   verificarConexion();
   await esperar(500);
+  verificarSinPausa(consultorio);
   const cola = await obtenerCola(consultorio);
   if (cola.enAtencion) throw new PacienteEnAtencionError(cola.enAtencion);
   const elegido = cola.enEspera.find((a) => a.turnoId === turnoId);
@@ -1029,5 +1097,374 @@ export async function reabrirDia(): Promise<void> {
 
 /** Avisa cuando otra pestaña cambia la cola, los avisos de profesionales o el cierre. */
 export function escucharCambios(alCambiar: () => void): () => void {
-  return escucharClaves([CLAVE, CLAVE_ESTADOS, CLAVE_CIERRES, CLAVE_ANULADAS], alCambiar);
+  return escucharClaves([CLAVE, CLAVE_ESTADOS, CLAVE_CIERRES, CLAVE_ANULADAS, CLAVE_PAUSAS, CLAVE_BOXES, CLAVE_AVISOS], alCambiar);
+}
+
+// ---------- DEV-58: pausa breve del consultorio ----------
+
+export const MINUTOS_DE_PAUSA = [5, 10, 15] as const;
+
+export type Pausa = { minutos: number; desde: string; hasta: string; consultorio: string; usuario: string };
+
+const clavePausa = (sucursal: string, profesional: string) => `${hoy()}|${sucursal}|${profesional}`;
+
+/** Pausas activas hoy en la sucursal, por nombre de profesional. Siguen hasta que el profesional reanuda. */
+export function pausasDeHoy(): Record<string, Pausa> {
+  const prefijo = `${hoy()}|${sucursalActiva()}|`;
+  const todas = leerJSON<Record<string, Pausa>>(CLAVE_PAUSAS, {});
+  return Object.fromEntries(Object.entries(todas).filter(([k]) => k.startsWith(prefijo)).map(([k, v]) => [k.slice(prefijo.length), v]));
+}
+
+export const pausaDe = (profesional: string): Pausa | null => pausasDeHoy()[profesional] ?? null;
+
+/** Minutos que faltan para que termine la pausa (0 si ya pasó el tiempo estimado). */
+export function minutosRestantesPausa(p: Pausa, ahora = new Date()): number {
+  return Math.max(0, Math.ceil((new Date(p.hasta).getTime() - ahora.getTime()) / 60_000));
+}
+
+export function textoPausaSala(consultorio: string, minutos: number): string {
+  return minutos > 0
+    ? `Consultorio ${consultorio}: pausa breve. La atención se reanuda en unos ${minutos} minutos.`
+    : `Consultorio ${consultorio}: pausa breve. La atención se reanuda en breve.`;
+}
+
+function verificarSinPausa(consultorio: string) {
+  const p = PROFESIONALES.find((x) => x.consultorio === consultorio);
+  if (p && pausaDe(p.nombre)) throw new ConsultorioEnPausaError();
+}
+
+/** El profesional se ausenta unos minutos sin cerrar el consultorio. Primero debe finalizar la atención en curso. */
+export async function pausarConsultorio(consultorio: string, minutos: number): Promise<Pausa> {
+  verificarConexion();
+  await esperar(400);
+  verificarServicio();
+  if (!(MINUTOS_DE_PAUSA as readonly number[]).includes(minutos)) throw new OperacionNoPermitidaError('Elija una pausa de 5, 10 o 15 minutos.');
+  const p = profesionalPorConsultorio(consultorio);
+  const enAtencion = Object.values(admisionesVigentes()).find((a) => a.consultorio === consultorio && a.estado === 'llamado');
+  if (enAtencion) throw new PacienteEnAtencionError(enAtencion);
+  const ahora = new Date();
+  const pausa: Pausa = { minutos, desde: ahora.toISOString(), hasta: new Date(ahora.getTime() + minutos * 60_000).toISOString(), consultorio, usuario: quienSoy() };
+  escribirJSON(CLAVE_PAUSAS, { ...leerJSON<Record<string, Pausa>>(CLAVE_PAUSAS, {}), [clavePausa(sucursalActiva(), p.nombre)]: pausa });
+  registrarAuditoria({ accion: 'pausa-consultorio', usuario: pausa.usuario, sucursal: sucursalActiva(), consultorio, detalle: `${p.nombre}: pausa de ${minutos} min` });
+  return pausa;
+}
+
+/** Fin de la pausa: la espera estimada de la sala se recalcula sin los minutos de pausa. */
+export async function reanudarConsultorio(consultorio: string): Promise<void> {
+  verificarConexion();
+  await esperar(300);
+  const p = profesionalPorConsultorio(consultorio);
+  const todas = leerJSON<Record<string, Pausa>>(CLAVE_PAUSAS, {});
+  const k = clavePausa(sucursalActiva(), p.nombre);
+  if (!todas[k]) return;
+  const pausa = todas[k];
+  delete todas[k];
+  escribirJSON(CLAVE_PAUSAS, todas);
+  registrarAuditoria({ accion: 'reanudar-consultorio', usuario: quienSoy(), sucursal: sucursalActiva(), consultorio, detalle: `${p.nombre}: duró ${Math.max(1, Math.round((Date.now() - new Date(pausa.desde).getTime()) / 60_000))} min` });
+}
+
+// ---------- DEV-60: el profesional elige el consultorio del día ----------
+
+export type OpcionConsultorio = { consultorio: Consultorio; ocupadoPor: string | null; agenda: boolean };
+
+/**
+ * Consultorios que puede elegir el profesional hoy en la sucursal activa. Un consultorio que
+ * usa otro profesional (por agenda o por elección) figura ocupado.
+ */
+export function opcionesDeConsultorio(profesionalId: string, sucursal = sucursalActiva()): OpcionConsultorio[] {
+  const agenda = consultorioDeAgenda(profesionalId, sucursal);
+  const otros = profesionalesDelDia(sucursal).filter((p) => p.id !== profesionalId);
+  return consultoriosDeSucursal(sucursal).map((c) => ({
+    consultorio: c,
+    ocupadoPor: otros.find((p) => p.consultorio === c.numero)?.nombre ?? null,
+    agenda: c.id === agenda,
+  }));
+}
+
+/** Consultorio propuesto: el elegido hoy, o el de la agenda, o el primero libre si ese está ocupado. */
+export function consultorioPropuesto(profesionalId: string, sucursal = sucursalActiva()): string | undefined {
+  const opciones = opcionesDeConsultorio(profesionalId, sucursal);
+  const libre = (id?: string) => opciones.find((o) => o.consultorio.id === id && !o.ocupadoPor)?.consultorio.id;
+  return libre(consultorioElegido(profesionalId)) ?? libre(consultorioDeAgenda(profesionalId, sucursal)) ?? opciones.find((o) => !o.ocupadoPor)?.consultorio.id;
+}
+
+/**
+ * Cambia el consultorio del día. No se puede con un paciente en atención. Los pacientes que
+ * esperan a ese profesional pasan al consultorio nuevo, conservando número y orden.
+ */
+export async function elegirConsultorio(profesionalId: string, consultorioId: string, sucursal = sucursalActiva()): Promise<string> {
+  verificarConexion();
+  await esperar(300);
+  const opcion = opcionesDeConsultorio(profesionalId, sucursal).find((o) => o.consultorio.id === consultorioId);
+  if (!opcion) throw new OperacionNoPermitidaError('Ese consultorio no está disponible en esta sucursal.');
+  if (opcion.ocupadoPor) throw new OperacionNoPermitidaError(`El consultorio ${opcion.consultorio.numero} lo está usando ${opcion.ocupadoPor}.`);
+  const prof = profesionalesDelDia(sucursal).find((p) => p.id === profesionalId);
+  if (!prof) throw new OperacionNoPermitidaError('No tiene agenda hoy en esta sucursal.');
+  const nuevo = opcion.consultorio.numero;
+  if (nuevo === prof.consultorio) {
+    // Confirma el mismo consultorio: no mueve a nadie.
+    if (consultorioElegido(profesionalId) !== consultorioId) guardarConsultorioElegido(profesionalId, consultorioId);
+    return nuevo;
+  }
+  const suyas = Object.values(leerTodas()).filter((a) => sucursalDe(a) === sucursal && a.profesional === prof.nombre);
+  const enAtencion = suyas.find((a) => a.estado === 'llamado');
+  if (enAtencion) throw new PacienteEnAtencionError(enAtencion);
+  guardarConsultorioElegido(profesionalId, consultorioId);
+  for (const a of suyas.filter((x) => x.estado === 'en-espera')) guardarAdmision({ ...a, consultorio: nuevo });
+  const pausa = leerJSON<Record<string, Pausa>>(CLAVE_PAUSAS, {})[clavePausa(sucursal, prof.nombre)];
+  if (pausa) escribirJSON(CLAVE_PAUSAS, { ...leerJSON<Record<string, Pausa>>(CLAVE_PAUSAS, {}), [clavePausa(sucursal, prof.nombre)]: { ...pausa, consultorio: nuevo } });
+  refrescarProfesionales();
+  registrarAuditoria({ accion: 'cambio-consultorio', usuario: quienSoy(), sucursal, detalle: `${prof.nombre}: consultorio ${prof.consultorio} → ${nuevo}` });
+  return nuevo;
+}
+
+/** true si el profesional tiene un paciente en atención (no puede cambiar de consultorio). */
+export function tienePacienteEnAtencion(profesional: string): boolean {
+  return Object.values(admisionesVigentes()).some((a) => a.profesional === profesional && a.estado === 'llamado');
+}
+
+// ---------- DEV-59: derivar desde el consultorio a otra especialidad ----------
+
+/**
+ * Finaliza la atención y pone al paciente directo en la cola del profesional de destino, sin
+ * pasar de nuevo por secretaría. Conserva el número; la espera nueva empieza ahora.
+ */
+export async function derivarAlFinalizar(admision: Admision, profesionalDestino: string, motivo: string): Promise<Admision> {
+  verificarConexion();
+  await esperar(500);
+  verificarServicio();
+  verificarDiaAbierto();
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.estado !== 'llamado') throw new OperacionNoPermitidaError('Solo se puede derivar al paciente que está en atención.');
+  const destino = PROFESIONALES.find((p) => p.nombre === profesionalDestino);
+  if (!destino || destino.nombre === actual.profesional) throw new OperacionNoPermitidaError('Elija otro profesional que atienda hoy en esta sucursal.');
+  if (!motivo.trim()) throw new OperacionNoPermitidaError('Indique el motivo de la derivación.');
+  const fecha = new Date().toISOString();
+  const usuario = quienSoy();
+  guardarAdmision({ ...actual, estado: 'finalizado', finalizadoEn: fecha });
+  const derivada: Admision = {
+    numero: actual.numero,
+    turnoId: `dv-${actual.turnoId}-${Date.now()}`,
+    paciente: actual.paciente,
+    profesional: destino.nombre,
+    consultorio: destino.consultorio,
+    horaTurno: fecha,
+    registradaEn: fecha,
+    estado: 'en-espera',
+    tipo: 'derivacion',
+    sucursal: sucursalDe(actual),
+    documento: actual.documento,
+    servicio: destino.especialidad,
+    derivadaDe: actual.turnoId,
+    derivaciones: [...(actual.derivaciones ?? []), { desde: actual.profesional, hacia: destino.nombre, motivo: motivo.trim(), fecha, usuario }],
+  };
+  guardarAdmision(derivada);
+  registrarAuditoria({
+    accion: 'derivacion-consultorio',
+    usuario,
+    fecha,
+    sucursal: sucursalDe(actual),
+    numero: actual.numero,
+    detalle: `${actual.profesional} → ${destino.nombre} · ${motivo.trim()}`,
+  });
+  return derivada;
+}
+
+// ---------- DEV-57: turnos del día en la vista del profesional ----------
+
+export type EstadoTurnoDia = 'pendiente' | 'en-espera' | 'en-atencion' | 'atendido' | 'ausente' | 'se-retiro' | 'derivado';
+
+/** Un turno del día para el profesional: sin documento ni datos de salud. */
+export type TurnoDelDia = { id: string; numero: string | null; paciente: string; horario: string; estado: EstadoTurnoDia };
+
+/** Estado de un turno según su admisión (o la falta de ella). Función pura. */
+export function estadoTurnoDia(admision: Admision | undefined, profesional: string, toleranciaVencida: boolean): EstadoTurnoDia {
+  if (!admision) return toleranciaVencida ? 'ausente' : 'pendiente';
+  if (admision.profesional && admision.profesional !== profesional) return 'derivado';
+  switch (admision.estado) {
+    case 'en-espera':
+      return 'en-espera';
+    case 'llamado':
+      return 'en-atencion';
+    case 'finalizado':
+      return 'atendido';
+    case 'se-retiro':
+      return 'se-retiro';
+    default:
+      return 'ausente'; // ausente, cancelado por tolerancia, no atendido o reprogramado
+  }
+}
+
+/** Turnos de hoy del profesional en la sucursal activa, por horario. */
+export function turnosDelProfesional(profesional: string, ahora = new Date()): TurnoDelDia[] {
+  const sucursal = sucursalActiva();
+  const registradas = admisionesVigentes();
+  const lista = new Map<string, TurnoDelDia>();
+  for (const t of turnosDelDia().filter((x) => x.sucursal === sucursal && x.profesional === profesional)) {
+    const a = registradas[t.id];
+    lista.set(t.id, {
+      id: t.id,
+      numero: a?.numero ?? null,
+      paciente: t.paciente,
+      horario: t.horario.toISOString(),
+      estado: estadoTurnoDia(a, profesional, evaluarTolerancia(t.horario, ahora) === 'vencida'),
+    });
+  }
+  // Turnos que ya estaban registrados al abrir la demo (no figuran en el proveedor simulado).
+  for (const a of Object.values(registradas)) {
+    if ((a.tipo ?? 'turno') !== 'turno' || a.profesional !== profesional || lista.has(a.turnoId)) continue;
+    lista.set(a.turnoId, { id: a.turnoId, numero: a.numero, paciente: a.paciente, horario: a.horaTurno, estado: estadoTurnoDia(a, profesional, false) });
+  }
+  return [...lista.values()].sort((x, y) => x.horario.localeCompare(y.horario));
+}
+
+// ---------- DEV-53: el paciente deshace su registro en el tótem ----------
+
+/** Segundos que tiene el paciente para tocar "Me equivoqué" después de registrar la llegada. */
+export const SEGUNDOS_PARA_DESHACER = 20;
+
+export function puedeDeshacer(a: Admision, ahora = new Date()): boolean {
+  return a.estado === 'en-espera' && !a.llamadoEn && !a.box && ahora.getTime() - new Date(a.registradaEn).getTime() < SEGUNDOS_PARA_DESHACER * 1000;
+}
+
+/**
+ * Anula el registro recién hecho en el tótem. No deja admisión duplicada ni número sin uso:
+ * el número vuelve a quedar libre para la próxima llegada.
+ */
+export async function deshacerLlegada(admision: Admision): Promise<void> {
+  verificarConexion();
+  await esperar(400);
+  const actual = leerAdmisiones()[admision.turnoId];
+  if (!actual) return; // ya estaba deshecha
+  if (!puedeDeshacer(actual)) throw new OperacionNoPermitidaError('Ya no se puede deshacer el registro. Acérquese a secretaría.');
+  eliminarAdmision(actual.turnoId);
+  registrarAuditoria({ accion: 'llegada-deshecha', usuario: quienSoy(), sucursal: sucursalDe(actual), numero: actual.numero, detalle: 'El paciente tocó "Me equivoqué" en el tótem' });
+}
+
+// ---------- DEV-49: prioridad de atención ----------
+
+/** Marca (o quita, con null) la prioridad de un paciente en espera. Queda registrado quién, cuándo y por qué. */
+export async function marcarPrioridad(admision: Admision, motivo: string | null): Promise<Admision> {
+  verificarConexion();
+  await esperar(400);
+  verificarServicio();
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.estado !== 'en-espera') throw new OperacionNoPermitidaError('Solo se puede dar prioridad a un paciente en espera.');
+  if (motivo !== null && !parametros().motivosPrioridad.includes(motivo)) throw new OperacionNoPermitidaError('Elija uno de los motivos aprobados por dirección.');
+  const fecha = new Date().toISOString();
+  const usuario = quienSoy();
+  const nueva: Admision = { ...actual, prioridad: motivo ? { motivo, usuario, fecha } : undefined };
+  guardarAdmision(nueva);
+  registrarAuditoria({
+    accion: motivo ? 'prioridad' : 'prioridad-quitada',
+    usuario,
+    fecha,
+    sucursal: sucursalDe(actual),
+    numero: actual.numero,
+    detalle: motivo ?? `Antes: ${actual.prioridad?.motivo ?? 'sin prioridad'}`,
+  });
+  return nueva;
+}
+
+// ---------- DEV-44: llamado a los boxes de admisión ----------
+
+/** Boxes activos de la sucursal, ordenados por número. */
+export const boxesDeSucursal = (sucursal = sucursalActiva()) =>
+  configuracion()
+    .boxes.filter((b) => b.sucursal === sucursal && b.activo)
+    .sort((a, b) => Number(a.numero) - Number(b.numero));
+
+const prefijoBox = (sucursal: string) => `${hoy()}|${sucursal}|`;
+
+/** Qué secretaria atiende en cada box hoy: número de box → usuario. */
+export function ocupacionBoxes(sucursal = sucursalActiva()): Record<string, string> {
+  const prefijo = prefijoBox(sucursal);
+  const todos = leerJSON<Record<string, string>>(CLAVE_BOXES, {});
+  return Object.fromEntries(Object.entries(todos).filter(([k]) => k.startsWith(prefijo)).map(([k, usuario]) => [k.slice(prefijo.length), usuario]));
+}
+
+/** Box en el que atiende hoy el usuario, o null. */
+export function boxDe(usuario: string, sucursal = sucursalActiva()): string | null {
+  return Object.entries(ocupacionBoxes(sucursal)).find(([, u]) => u === usuario)?.[0] ?? null;
+}
+
+/** Paciente que está ahora en el box, si hay uno. */
+export function pacienteEnBox(numeroBox: string): Admision | null {
+  return Object.values(admisionesVigentes()).find((a) => a.box?.numero === numeroBox && a.box.estado === 'llamado') ?? null;
+}
+
+/** La secretaria elige (o deja, con null) el box donde atiende. */
+export async function elegirBox(usuario: string, numeroBox: string | null): Promise<void> {
+  verificarConexion();
+  await esperar(300);
+  const sucursal = sucursalActiva();
+  const actual = boxDe(usuario, sucursal);
+  if (actual && actual !== numeroBox && pacienteEnBox(actual)) throw new OperacionNoPermitidaError('Finalice la atención del box antes de cambiar.');
+  const ocupacion = ocupacionBoxes(sucursal);
+  if (numeroBox && ocupacion[numeroBox] && ocupacion[numeroBox] !== usuario) throw new OperacionNoPermitidaError(`El box ${numeroBox} lo está usando ${ocupacion[numeroBox]}.`);
+  if (numeroBox && !boxesDeSucursal(sucursal).some((b) => b.numero === numeroBox)) throw new OperacionNoPermitidaError('Ese box no existe en esta sucursal.');
+  const todos = leerJSON<Record<string, string>>(CLAVE_BOXES, {});
+  if (actual) delete todos[prefijoBox(sucursal) + actual];
+  if (numeroBox) todos[prefijoBox(sucursal) + numeroBox] = usuario;
+  escribirJSON(CLAVE_BOXES, todos);
+}
+
+/**
+ * Pacientes que esperan pasar por un box: en espera y todavía no atendidos en admisión.
+ * Los derivados desde un consultorio (DEV-59) no vuelven a pasar por secretaría.
+ */
+export function colaDeBox(): Admision[] {
+  return Object.values(admisionesVigentes())
+    .filter((a) => a.estado === 'en-espera' && !a.box && a.tipo !== 'derivacion')
+    .sort((a, b) => Number(!!b.prioridad) - Number(!!a.prioridad) || a.registradaEn.localeCompare(b.registradaEn));
+}
+
+/** Llama al box al paciente elegido o, sin elegir, al próximo de la cola. */
+export async function llamarAlBox(numeroBox: string, turnoId?: string): Promise<Admision> {
+  verificarConexion();
+  await esperar(400);
+  verificarServicio();
+  const enBox = pacienteEnBox(numeroBox);
+  if (enBox) throw new PacienteEnAtencionError(enBox);
+  const cola = colaDeBox();
+  const elegido = turnoId ? cola.find((a) => a.turnoId === turnoId) : cola[0];
+  if (!elegido) throw new PacienteNoDisponibleError();
+  const ahora = new Date().toISOString();
+  const llamado: Admision = { ...elegido, box: { numero: numeroBox, estado: 'llamado', llamadoEn: ahora, llamados: 1, usuario: quienSoy() } };
+  guardarAdmision(llamado);
+  return llamado;
+}
+
+export async function volverALlamarBox(admision: Admision): Promise<Admision> {
+  verificarConexion();
+  await esperar(300);
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.box?.estado !== 'llamado') return actual;
+  const llamado: Admision = { ...actual, box: { ...actual.box, llamadoEn: new Date().toISOString(), llamados: actual.box.llamados + 1 } };
+  guardarAdmision(llamado);
+  return llamado;
+}
+
+/** No se presentó al box después de los llamados: queda ausente. */
+export async function ausenteEnBox(admision: Admision): Promise<Admision> {
+  verificarConexion();
+  await esperar(300);
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.box?.estado !== 'llamado') throw new OperacionNoPermitidaError('El paciente ya no está llamado al box.');
+  const ahora = new Date().toISOString();
+  const ausente: Admision = { ...actual, estado: 'ausente', ausenteEn: ahora, box: { ...actual.box, estado: 'ausente', finalizadoEn: ahora } };
+  guardarAdmision(ausente);
+  registrarAuditoria({ accion: 'ausente-box', usuario: quienSoy(), sucursal: sucursalDe(actual), numero: actual.numero, detalle: `Box ${actual.box.numero}` });
+  return ausente;
+}
+
+/** Termina la atención en el box: el paciente queda en espera del profesional que corresponde. */
+export async function finalizarBox(admision: Admision): Promise<Admision> {
+  verificarConexion();
+  await esperar(300);
+  const actual = leerAdmisiones()[admision.turnoId] ?? admision;
+  if (actual.box?.estado !== 'llamado') throw new OperacionNoPermitidaError('El paciente ya no está llamado al box.');
+  const lista: Admision = { ...actual, box: { ...actual.box, estado: 'finalizado', finalizadoEn: new Date().toISOString() } };
+  guardarAdmision(lista);
+  return lista;
 }

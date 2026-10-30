@@ -26,7 +26,7 @@ npm run dev
 Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (`/totem`) y la sala (`/sala`) se abren sin usuario.
 
 - `npm run build`: compila para producción (carpeta `dist/`).
-- `npm test`: corre las pruebas (tolerancia y llegada anticipada, tiempos de espera, usuarios, contraseñas y permisos, configuración y agenda, resúmenes y reportes, llamado fuera de orden y atajos de teclado).
+- `npm test`: corre las pruebas (tolerancia y llegada anticipada, tiempos de espera, usuarios, contraseñas y permisos, configuración y agenda, resúmenes y reportes, llamado fuera de orden y atajos de teclado, y las reglas de S3 y S4: prioridad, boxes, pausa, consultorio del día, derivación, turnos del día, deshacer, buscador, avisos, ticket y voz).
 
 ## Usuarios de prueba (ficticios)
 
@@ -36,7 +36,7 @@ Contraseña para todos: `saludplus`. En la pantalla de ingreso, los botones "Adm
 |---|---|---|---|
 | `jbenitez` | Admisión (secretaría) | Villa Norte | Admisión, cierre del día y abrir el tótem y la sala de su sucursal |
 | `mcastro` | Admisión (secretaría) | Villa Norte y Güemes | Ídem; elige la sucursal al ingresar y puede cambiarla desde el menú |
-| `lferrer`, `tvidal`, `prios`, `aluna` | Profesional | Villa Norte (consultorios 4, 2, 6 y 8) | Solo su consultorio (#59: la sala es un equipo de la sucursal, no una herramienta del médico) |
+| `lferrer`, `tvidal`, `prios`, `aluna` | Profesional | Villa Norte (consultorios 4, 2, 6 y 8 por agenda; 10 y 12 libres) | Solo su consultorio (#59). Al ingresar elige el consultorio del día (DEV-60) |
 | `maguirre`, `isosa` | Profesional | Güemes (consultorios 1 y 3) | Ídem |
 | `direccion` | Dirección | Las dos | Todo, más reportes y administración |
 
@@ -141,6 +141,22 @@ La cola se guarda en el navegador (localStorage) para que el tótem y el profesi
 - **Parámetros configurables:** tolerancia, minutos por consulta, espera larga, cierre de sesión, desde cuánto antes se acepta la llegada, llamados antes de marcar ausente y motivos de prioridad. Se validan, se aplican sin recargar y se pueden restaurar.
 - **Reportes:** por sucursal (o todas), especialidad y período (hoy, 7 o 30 días), con exportación a Excel (CSV con punto y coma). Hoy usa los datos en vivo; los días anteriores son simulados para la demo. No incluye nombres ni datos de salud.
 
+### Correcciones del profesor (29/10): Sprint 3 y 4
+
+| ID | Qué se hizo | Dónde probarlo |
+|---|---|---|
+| DEV-44 | **Boxes de admisión:** cada secretaria elige su box; llama al siguiente o a uno de la cola (Acciones → "Llamar a mi box"); vuelve a llamar, marca ausente y finaliza. La sala anuncia "Box 1" igual que un consultorio. Al terminar, el paciente queda en espera de su profesional. | `/secretaria` → "Box de admisión" |
+| DEV-48 | **Ticket a pedido:** botón "Imprimir ticket" al registrar la llegada. Muestra número, consultorio, hora de llegada y espera; sin nombre ni datos de salud. Una sola vez por llegada. `?impresora=sin-papel` o `?impresora=error` simulan fallas: el tótem avisa y el número queda en pantalla. | `/totem` |
+| DEV-49 | **Prioridad:** Acciones → "Dar prioridad" con un motivo de los que configura dirección. Pasa adelante en la cola del profesional, se ve con ícono y texto, y queda en la auditoría (quién, cuándo, por qué). La sala no muestra el motivo. | `/secretaria`, `/profesional` |
+| DEV-53 | **Volver atrás y "Me equivoqué":** cada paso del tótem tiene "Volver". Después de registrar, el paciente tiene 20 segundos para deshacer; el número queda libre (no hay huecos ni duplicados). Pasado ese tiempo, el tótem indica ir a secretaría. | `/totem` |
+| DEV-54 | **Buscador de la cola** por número (A021 o 21), DNI o nombre, sin importar tildes. Resalta las coincidencias, se combina con los filtros y se limpia con la X o Escape. | `/secretaria` |
+| DEV-55 | **Avisos en la sala:** mensaje corto (o uno frecuente), duración y sucursal. Se muestra en una franja arriba, sin tapar el número llamado. Rechaza nombres de pacientes del día, documentos, teléfonos y correos. Se puede quitar antes de que venza. | `/secretaria` → "Avisos en la sala" |
+| DEV-57 | **Turnos de hoy** en la vista del profesional: llegó/en espera, en atención, atendido, ausente o pendiente de llegada, con horario y cuántos faltan. Se actualiza solo. Sin datos de salud. | `/profesional` |
+| DEV-58 | **Pausa** de 5, 10 o 15 minutos: no se puede llamar, la sala muestra la demora del consultorio y la secretaría lo ve "En pausa". "Reanudar atención" recalcula la espera. | `/profesional` |
+| DEV-59 | **Finalizar y derivar:** el profesional elige el profesional de destino; el paciente pasa directo a esa cola con su mismo número, sin pasar por secretaría. La secretaría lo ve como "Derivado por…" y queda registrado. | `/profesional` con un paciente en atención |
+| DEV-60 | **Consultorio del día:** el profesional elige dónde atiende al ingresar (se propone el de su agenda; los ocupados no se pueden elegir). Lo cambia desde el menú si no tiene un paciente en atención; sus pacientes en espera lo siguen. Villa Norte tiene ahora los consultorios 10 y 12 libres. | Ingresar con `lferrer` |
+| DEV-61 | **Llamado por voz:** "Número A023, consultorio 4", también al volver a llamar. Se activa o silencia en la sala. Nunca dice nombres. Si el navegador no tiene voz, queda el sonido. | `/sala` |
+
 ## Reglas implementadas
 
 - **Tolerancia de 15 minutos (RF-07):** hasta 15:00 de demora se acepta; desde 15:01 el turno queda cancelado y el tótem deriva a secretaría para un contraturno (`src/servicios/tolerancia.ts`, con pruebas).
@@ -161,6 +177,17 @@ La cola se guarda en el navegador (localStorage) para que el tótem y el profesi
 - Si dos profesionales llaman al mismo paciente a la vez, el segundo ve "Ese paciente ya no está en espera"; la garantía real necesita el backend.
 - Los atajos usan letras sueltas (N, R, F, L). Falta validarlos con profesionales reales y con lectores de pantalla.
 - Probado en Chrome (escritorio 1440 px, tablet 1024 y 768 px, celular 390 px). Falta probar en el tótem físico.
+- **Inicio de sesión desde otra computadora o celular:** si la demo se abre por la IP de la red (`http://192.168…:5173`), el navegador no ofrece `crypto.subtle`. Ahora se usa un cálculo SHA-256 propio, así los usuarios de prueba entran igual. Si un usuario quedó bloqueado o con datos viejos, abrir `/ingresar?reset=1`.
+
+### Pendientes de S3 y S4 (DEV-44 a DEV-61)
+
+- **DEV-61:** la voz depende del navegador y del sistema (en Windows y Chrome suele haber voz en español). Falta probarla en la TV real y con personas con baja visión. El navegador puede bloquear la voz hasta que alguien toca la pantalla, igual que el sonido.
+- **DEV-48:** la impresora es simulada; con la impresora térmica real hay que confirmar el ancho del papel (se diseñó para 80 mm) y cómo informa la falta de papel. El control de "una sola vez" vive en el navegador del tótem.
+- **DEV-44:** todos los pacientes que llegan por el tótem o secretaría pasan por la cola de box; los derivados desde un consultorio no. Falta confirmar con SaludPlus si algunos servicios no pasan por box.
+- **DEV-55:** el control de datos personales revisa nombres de los pacientes del día, números largos y correos; no detecta todos los casos (por ejemplo, un apellido que no figura en la cola).
+- **DEV-60:** dos profesionales que eligen al mismo tiempo el mismo consultorio desde equipos distintos: lo resuelve el backend. Los consultorios 10 y 12 de Villa Norte y 5 de Güemes son de demostración.
+- **DEV-58:** la pausa sigue activa hasta que el profesional reanuda, aunque pase el tiempo estimado (la sala muestra "se reanuda en breve").
+- Como el resto de la demo, estas reglas viven en el navegador; con el backend se validan en el servidor.
 
 ## Estructura
 

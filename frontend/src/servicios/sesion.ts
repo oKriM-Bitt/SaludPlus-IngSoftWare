@@ -5,16 +5,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import { borrar, escribirJSON, escucharClaves, leerJSON, parametroURL } from './almacen';
-import {
-  asignacionDe,
-  configuracion,
-  consultorioPorId,
-  escucharConfiguracion,
-  nombreSucursal,
-  parametros,
-  profesionalPorId,
-  type UsuarioRegistrado,
-} from './configuracion';
+import { configuracion, escucharConfiguracion, nombreSucursal, parametros, profesionalesDelDia, type UsuarioRegistrado } from './configuracion';
 import { registrarAuditoria } from './auditoria';
 import { problemaConClave, resumenClave } from './claves';
 import { modificarUsuario, verificarCredenciales, type ResultadoCredenciales, type Usuario } from './usuarios';
@@ -44,9 +35,9 @@ function vencida(g: Guardada, ahora = Date.now()) {
 function armarUsuario(r: UsuarioRegistrado, sucursal: string): Usuario {
   const base: Usuario = { usuario: r.usuario, nombre: r.nombre, rol: r.rol, sucursal, centro: nombreSucursal(sucursal), sucursales: r.sucursales };
   if (r.rol !== 'profesional' || !r.profesional) return base;
-  const asignacion = asignacionDe(r.profesional, sucursal);
-  const consultorio = asignacion ? consultorioPorId(asignacion.consultorio)?.numero : undefined;
-  return { ...base, consultorio, profesional: profesionalPorId(r.profesional)?.nombre };
+  // DEV-60: el consultorio del día es el que eligió al ingresar o, si no eligió, el de su agenda.
+  const hoy = profesionalesDelDia(sucursal).find((p) => p.id === r.profesional);
+  return { ...base, consultorio: hoy?.consultorio, profesionalId: r.profesional, profesional: hoy?.nombre ?? configuracion().profesionales.find((p) => p.id === r.profesional)?.nombre };
 }
 
 // Instantánea estable para useSyncExternalStore: se recalcula solo cuando algo cambia.

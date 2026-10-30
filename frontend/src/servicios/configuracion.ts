@@ -105,14 +105,14 @@ export function configuracionInicial(): Configuracion {
     hasta: '21:00',
   });
   return {
-    version: 1,
+    version: 2, // DEV-60: se agregaron consultorios libres para la rotación
     sucursales: [
       { id: 'villa-norte', nombre: 'Centro Villa Norte', direccion: 'Av. Ficticia 1234', prefijo: 'A', activa: true },
       { id: 'guemes', nombre: 'Centro Güemes', direccion: 'Calle Inventada 567', prefijo: 'B', activa: true },
     ],
     consultorios: [
-      ...['2', '4', '6', '8'].map((n) => ({ id: `vn-${n}`, sucursal: 'villa-norte', numero: n, activo: true })),
-      ...['1', '3'].map((n) => ({ id: `gu-${n}`, sucursal: 'guemes', numero: n, activo: true })),
+      ...['2', '4', '6', '8', '10', '12'].map((n) => ({ id: `vn-${n}`, sucursal: 'villa-norte', numero: n, activo: true })),
+      ...['1', '3', '5'].map((n) => ({ id: `gu-${n}`, sucursal: 'guemes', numero: n, activo: true })),
     ],
     boxes: [
       { id: 'vn-b1', sucursal: 'villa-norte', numero: '1', activo: true },
@@ -152,8 +152,14 @@ export function configuracionInicial(): Configuracion {
 
 export const CLAVE_CONFIG = 'saludplus.config';
 
+/** DEV-60: consultorio que eligió cada profesional para hoy (rotación). Clave: `fecha|idProfesional`. */
+export const CLAVE_CONSULTORIOS_DIA = 'saludplus.consultorios.dia';
+
 // ?reset=1 vuelve la demo a su estado inicial, también la configuración.
-if (parametroURL('reset') === '1') borrar(CLAVE_CONFIG);
+if (parametroURL('reset') === '1') {
+  borrar(CLAVE_CONFIG);
+  borrar(CLAVE_CONSULTORIOS_DIA);
+}
 
 let cache: Configuracion | null = null;
 const oyentes = new Set<() => void>();
@@ -164,6 +170,8 @@ export function configuracion(): Configuracion {
     const inicial = configuracionInicial();
     // Completa lo que falte si la configuración guardada es de una versión anterior.
     cache = guardada && guardada.version === inicial.version ? { ...inicial, ...guardada, parametros: { ...inicial.parametros, ...guardada.parametros } } : inicial;
+    // Usuarios guardados por una versión anterior sin contraseña: se toma la de la demo.
+    cache.usuarios = cache.usuarios.map((u) => (u.claveHash ? u : { ...u, claveHash: inicial.usuarios.find((i) => i.usuario === u.usuario)?.claveHash ?? '' }));
   }
   return cache;
 }
@@ -191,8 +199,8 @@ export function escucharConfiguracion(alCambiar: () => void): () => void {
   return () => oyentes.delete(alCambiar);
 }
 
-// Otra pestaña cambió la configuración: se vuelve a leer.
-escucharClaves([CLAVE_CONFIG], () => {
+// Otra pestaña cambió la configuración o el consultorio elegido: se vuelve a leer.
+escucharClaves([CLAVE_CONFIG, CLAVE_CONSULTORIOS_DIA], () => {
   cache = null;
   oyentes.forEach((f) => f());
 });
@@ -225,14 +233,54 @@ export function asignacionDe(profesionalId: string, sucursal: string, cuando = n
 
 export type ProfesionalDelDia = { id: string; nombre: string; especialidad: string; consultorio: string };
 
-/** Profesionales activos que atienden hoy en la sucursal, con el número de consultorio. */
-export function profesionalesDelDia(sucursal: string, cuando = new Date()): ProfesionalDelDia[] {
+// ---------- DEV-60: el profesional elige el consultorio del día ----------
+
+const fechaLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const claveDia = (profesionalId: string, cuando = new Date()) => `${fechaLocal(cuando)}|${profesionalId}`;
+
+/** Consultorio (id) que el profesional eligió para ese día, si eligió uno. */
+export function consultorioElegido(profesionalId: string, cuando = new Date()): string | undefined {
+  return leerJSON<Record<string, string>>(CLAVE_CONSULTORIOS_DIA, {})[claveDia(profesionalId, cuando)];
+}
+
+/** Guarda el consultorio elegido para hoy y avisa a las pantallas. Las reglas se controlan en turnos.ts. */
+export function guardarConsultorioElegido(profesionalId: string, consultorioId: string, cuando = new Date()) {
+  const todos = leerJSON<Record<string, string>>(CLAVE_CONSULTORIOS_DIA, {});
+  escribirJSON(CLAVE_CONSULTORIOS_DIA, { ...todos, [claveDia(profesionalId, cuando)]: consultorioId });
+  oyentes.forEach((f) => f());
+}
+
+/** Consultorio de la agenda (id) del profesional en la sucursal: es el que se propone por defecto. */
+export function consultorioDeAgenda(profesionalId: string, sucursal: string, cuando = new Date()): string | undefined {
+  return asignacionDe(profesionalId, sucursal, cuando)?.consultorio;
+}
+
+/** Consultorio que usa hoy: el elegido (si es de esa sucursal y está activo) o el de la agenda. */
+function consultorioEfectivo(profesionalId: string, sucursal: string, cuando: Date, usarElegido: boolean) {
+  const agenda = consultorioDeAgenda(profesionalId, sucursal, cuando);
+  if (!agenda) return undefined; // no atiende ese día en la sucursal
+  if (!usarElegido) return consultorioPorId(agenda);
+  const elegido = consultorioPorId(consultorioElegido(profesionalId, cuando) ?? '');
+  if (elegido && elegido.sucursal === sucursal && elegido.activo) return elegido;
+  return consultorioPorId(agenda);
+}
+
+/** Consultorios activos de una sucursal, ordenados por número. */
+export const consultoriosDeSucursal = (sucursal: string) =>
+  configuracion()
+    .consultorios.filter((c) => c.sucursal === sucursal && c.activo)
+    .sort((a, b) => Number(a.numero) - Number(b.numero) || a.numero.localeCompare(b.numero));
+
+/**
+ * Profesionales activos que atienden hoy en la sucursal, con el número de consultorio.
+ * Con `usarElegido = false` devuelve el consultorio de la agenda, sin la rotación del día (DEV-60).
+ */
+export function profesionalesDelDia(sucursal: string, cuando = new Date(), usarElegido = true): ProfesionalDelDia[] {
   const c = configuracion();
   return c.profesionales
     .filter((p) => p.activo)
     .map((p) => {
-      const a = asignacionDe(p.id, sucursal, cuando);
-      const cons = a ? consultorioPorId(a.consultorio) : undefined;
+      const cons = consultorioEfectivo(p.id, sucursal, cuando, usarElegido);
       return cons ? { id: p.id, nombre: p.nombre, especialidad: p.especialidad, consultorio: cons.numero } : null;
     })
     .filter((p): p is ProfesionalDelDia => p !== null)

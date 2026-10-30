@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Logo } from '../../componentes/Logo';
 import { Icon } from '../../componentes/Icon';
-import { escucharCambios, hayConexion, obtenerSala, SinConexionError, type DatosSala } from '../../servicios/turnos';
+import { escucharCambios, hayConexion, obtenerSala, SinConexionError, textoDestino, type DatosSala, type Llamado } from '../../servicios/turnos';
 import { hora } from '../../utilidades/fechas';
 import { audioBloqueado, guardarSonido, habilitarAudio, sonarLlamado, sonidoActivado } from '../../servicios/sonido';
+import { anunciar, guardarVoz, vozActivada, vozDisponible } from '../../servicios/voz';
 import { sucursalDelEquipo } from '../../servicios/contexto';
 import { nombreSucursal } from '../../servicios/configuracion';
 import './sala.css';
 
 const ACTUALIZAR_CADA_MS = 4_000;
 const AVISO_MS = 8_000;
+/** DEV-61: la voz empieza después del ding-dong para que no se superpongan. */
+const VOZ_DESPUES_DEL_SONIDO_MS = 2_300;
 
-type Aviso = { numero: string; consultorio: string; repetido: boolean };
+type Aviso = Pick<Llamado, 'numero' | 'lugar' | 'destino'> & { repetido: boolean };
 
 type Carga = 'cargando' | 'ok' | 'error' | 'sin-conexion';
 
@@ -24,26 +27,37 @@ export function SalaPage() {
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [sonido, setSonido] = useState(sonidoActivado);
   const [bloqueado, setBloqueado] = useState(audioBloqueado);
+  const [voz, setVoz] = useState(vozActivada);
+  const hayVoz = vozDisponible();
   const ultimoLlamado = useRef<string | null>(null);
   const sonidoRef = useRef(sonido);
   sonidoRef.current = sonido;
+  const vozRef = useRef(voz);
+  vozRef.current = voz;
   const temporizador = useRef<number>();
+  const temporizadorVoz = useRef<number>();
 
   const actualizar = useCallback(async () => {
     if (!hayConexion()) return setCarga('sin-conexion');
     try {
       const d = await obtenerSala();
       // #45: un llamado nuevo o repetido se destaca en grande y suena unos segundos.
-      const clave = d.actual ? `${d.actual.numero}|${d.actual.llamadoEn}` : '';
+      const clave = d.actual ? `${d.actual.lugar}|${d.actual.numero}|${d.actual.llamadoEn}` : '';
       if (ultimoLlamado.current !== null && d.actual && clave !== ultimoLlamado.current) {
+        const llamado = d.actual;
         setNuevoLlamado(true);
-        setAviso({ numero: d.actual.numero, consultorio: d.actual.consultorio, repetido: d.actual.llamados > 1 });
+        setAviso({ numero: llamado.numero, lugar: llamado.lugar, destino: llamado.destino, repetido: llamado.llamados > 1 });
         window.clearTimeout(temporizador.current);
         temporizador.current = window.setTimeout(() => {
           setNuevoLlamado(false);
           setAviso(null);
         }, AVISO_MS);
-        if (sonidoRef.current) setBloqueado(!sonarLlamado());
+        const sono = sonidoRef.current && sonarLlamado();
+        if (sonidoRef.current) setBloqueado(!sono);
+        // DEV-61: también el llamado repetido se anuncia por voz. Solo número y destino, nunca el nombre.
+        // Si el navegador no tiene voz, queda el aviso sonoro.
+        window.clearTimeout(temporizadorVoz.current);
+        if (vozRef.current) temporizadorVoz.current = window.setTimeout(() => anunciar(llamado), sono ? VOZ_DESPUES_DEL_SONIDO_MS : 0);
       }
       ultimoLlamado.current = clave;
       setDatos(d);
@@ -70,7 +84,20 @@ export function SalaPage() {
     };
   }, [actualizar]);
 
-  useEffect(() => () => window.clearTimeout(temporizador.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(temporizador.current);
+      window.clearTimeout(temporizadorVoz.current);
+    },
+    [],
+  );
+
+  /** DEV-61: activar o silenciar la voz desde la configuración de la sala. */
+  const cambiarVoz = () => {
+    const activar = !voz;
+    setVoz(activar);
+    guardarVoz(activar);
+  };
 
   const cambiarSonido = async () => {
     const activar = !sonido;
@@ -101,9 +128,31 @@ export function SalaPage() {
             <Icon name={sonido ? 'volume' : 'volume-off'} size={28} />
             {sonido ? 'Sonido activado' : 'Sonido silenciado'}
           </button>
+          {hayVoz ? (
+            <button type="button" className="sala__sonido" aria-pressed={voz} onClick={cambiarVoz}>
+              <Icon name={voz ? 'megaphone' : 'volume-off'} size={28} />
+              {voz ? 'Voz activada' : 'Voz silenciada'}
+            </button>
+          ) : (
+            <span className="sala__sonido sala__sin-voz" title="Este navegador no tiene voz. Se mantiene el aviso sonoro.">
+              <Icon name="info" size={24} /> Sin voz: solo sonido
+            </span>
+          )}
           <span className="sala__hora">{sinConexion && horaDatos ? `${horaDatos} · última actualización` : hora(ahora)}</span>
         </span>
       </header>
+
+      {/* DEV-55: avisos de la secretaría, en una franja propia arriba: siempre visibles y sin tapar el número llamado. */}
+      {mostrarDatos && datos.generales.length > 0 && (
+        <section className="sala__generales" aria-label="Avisos del centro" role="status">
+          <Icon name="info" size={40} />
+          <ul>
+            {datos.generales.map((g) => (
+              <li key={g.id}>{g.texto}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {sonido && bloqueado && (
         <button type="button" className="sala__habilitar" onClick={habilitar}>
@@ -121,7 +170,7 @@ export function SalaPage() {
                 {datos.actual.llamados > 1 ? 'Llamando nuevamente' : 'Llamando ahora'}
               </span>
               <span className="sala__numero">{datos.actual.numero}</span>
-              <span className="sala__consultorio">Consultorio {datos.actual.consultorio}</span>
+              <span className="sala__consultorio">{textoDestino(datos.actual)}</span>
             </>
           ) : (
             <Mensaje carga={carga} horaDatos={horaDatos} />
@@ -146,7 +195,7 @@ export function SalaPage() {
                     <Icon name="info" size={32} /> Aviso
                   </strong>
                   {datos.avisos.map((a) => (
-                    <span key={a.consultorio}>{a.texto}</span>
+                    <span key={a.consultorio + a.texto}>{a.texto}</span>
                   ))}
                 </div>
               )}
@@ -176,11 +225,11 @@ export function SalaPage() {
           {datos && (carga === 'ok' || sinConexion) && (sinConexion ? [datos.actual, ...datos.anteriores].filter(Boolean).slice(0, 4) : datos.anteriores).length > 0 ? (
             <ul className="sala__lista">
               {(sinConexion ? [datos.actual!, ...datos.anteriores].filter(Boolean).slice(0, 4) : datos.anteriores).map((l) => (
-                <li key={l.numero + l.llamadoEn}>
+                <li key={l.lugar + l.numero + l.llamadoEn}>
                   <strong>{l.numero}</strong>
                   <span>
-                    Consultorio
-                    <b>{l.consultorio}</b>
+                    {l.lugar === 'box' ? 'Box' : 'Consultorio'}
+                    <b>{l.destino}</b>
                   </span>
                 </li>
               ))}
@@ -207,7 +256,7 @@ export function SalaPage() {
               {aviso.repetido ? 'Llamando nuevamente' : 'Llamando'}
             </span>
             <span className="sala__aviso-numero">{aviso.numero}</span>
-            <span className="sala__aviso-consultorio">Consultorio {aviso.consultorio}</span>
+            <span className="sala__aviso-consultorio">{textoDestino(aviso)}</span>
           </div>
         </div>
       )}

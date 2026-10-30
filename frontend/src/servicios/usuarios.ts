@@ -19,6 +19,7 @@ export type Usuario = {
   sucursales: string[]; // sucursales en las que puede trabajar
   consultorio?: string; // solo profesionales: consultorio asignado hoy en la sucursal
   profesional?: string; // solo profesionales: nombre como profesional
+  profesionalId?: string; // solo profesionales: id en la configuración (DEV-60)
 };
 
 export const ETIQUETA_ROL: Record<Rol, string> = {

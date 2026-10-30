@@ -417,3 +417,45 @@
     flex-wrap: wrap;
   }
 }
+
+/* DEV-61: el navegador no tiene voz; se informa sin ser un botón */
+.sala__sin-voz {
+  cursor: default;
+  border-style: dashed;
+  color: #cbd5e1;
+}
+
+@media (max-width: 900px) {
+  .sala__derecha {
+    flex-wrap: wrap;
+  }
+}
+
+/* DEV-55: avisos generales de la secretaría, en una franja propia debajo de los llamados */
+.sala__generales {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.25vw, 24px);
+  padding: clamp(14px, 1.25vw, 24px) clamp(16px, 1.67vw, 32px);
+  border-left: 8px solid #fbbf24;
+  border-radius: var(--radius-card);
+  background: var(--sala-panel);
+  font-size: clamp(18px, 1.77vw, 34px);
+  line-height: 1.25;
+}
+
+.sala__generales svg {
+  flex-shrink: 0;
+  width: 1.2em;
+  height: 1.2em;
+  color: #fbbf24;
+}
+
+.sala__generales ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

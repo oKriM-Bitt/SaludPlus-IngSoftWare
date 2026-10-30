@@ -28,7 +28,7 @@ Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (
 
 ## Usuarios de prueba (ficticios)
 
-Contraseña para todos: `saludplus`. En la pantalla de ingreso, "Usuarios de prueba" permite elegirlos con un toque.
+Contraseña para todos: `saludplus`. En la pantalla de ingreso, los botones "Admisión", "Profesional" y "Dirección" cargan un usuario de prueba con un toque, y "Ver todos los usuarios de prueba" muestra la lista completa.
 
 | Usuario | Rol | Qué ve en el menú |
 |---|---|---|
@@ -160,3 +160,11 @@ src/
   App.tsx           Rutas de cada pantalla
   main.tsx          Punto de entrada
 ```
+
+## Adaptación a pantallas
+
+Todas las pantallas se revisaron en 360, 390, 768, 1024, 1440 y 1920 px de ancho, sin desplazamiento horizontal (#80):
+
+- **Inicio de sesión:** en escritorio, panel de marca a la izquierda y formulario a la derecha; en tablet, franja de marca arriba y formulario en tarjeta; en celular, franja compacta y formulario a todo el ancho.
+- **Secretaría:** en notebook chica la tabla se desplaza dentro de su tarjeta; en tablet pasa a tarjetas de a dos; en celular, de a una, con el logo y el menú en la misma fila.
+

@@ -1,32 +1,163 @@
-/* Inicio de sesión (#47) */
+/* Inicio de sesión (#47, rediseño #80)
+   Escritorio: panel de marca a la izquierda y formulario a la derecha.
+   Tablet: franja de marca arriba y formulario centrado.
+   Celular: franja compacta y formulario a todo el ancho. */
+
 .ingreso {
   min-height: 100dvh;
   display: grid;
-  place-items: center;
-  padding: var(--space-5) var(--space-4);
-  background: linear-gradient(180deg, var(--color-bg) 0%, #e6eff8 100%);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  background: var(--color-bg);
 }
 
-.ingreso__card {
-  width: min(460px, 100%);
+/* Panel de marca */
+.ingreso__marca {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: clamp(32px, 5vw, 72px);
+  background: linear-gradient(155deg, var(--color-primary) 0%, #0a4f8f 45%, var(--color-secondary) 100%);
+  color: #fff;
+}
+
+/* Cruces de la marca como textura de fondo */
+.ingreso__marca::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath fill='%23ffffff' fill-opacity='0.06' d='M30 18h12v12h12v12H42v12H30V42H18V30h12z'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.ingreso__marca::after {
+  content: '';
+  position: absolute;
+  right: -120px;
+  bottom: -120px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.45) 0%, rgba(13, 148, 136, 0) 70%);
+  pointer-events: none;
+}
+
+.ingreso__marca > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ingreso__marca-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 4vh, 48px);
+  max-width: 520px;
+}
+
+.ingreso__marca .logo {
+  color: #fff;
+}
+
+.ingreso__marca .logo rect {
+  fill: #fff;
+}
+
+.ingreso__marca-texto h2 {
+  font-size: clamp(28px, 3.2vw, 44px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.ingreso__marca-texto p {
+  margin-top: var(--space-3);
+  max-width: 34ch;
+  color: #dbeafe;
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.5;
+}
+
+.ingreso__beneficios {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ingreso__beneficios li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: #dbeafe;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.ingreso__beneficios strong {
+  display: block;
+  color: #fff;
+  font-size: 16px;
+}
+
+.ingreso__beneficio-icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.ingreso__marca-pie {
+  color: #bfdbfe;
+  font-size: 14px;
+}
+
+/* Panel del formulario */
+.ingreso__panel {
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 48px);
+}
+
+.ingreso__form-caja {
+  width: min(440px, 100%);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: clamp(24px, 5vw, 40px);
-  border: 1px solid var(--color-border-soft);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: 0 12px 40px rgba(11, 36, 64, 0.08);
 }
 
-.ingreso__card h1 {
+.ingreso__encabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ingreso__candado {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-card);
+  background: #eaf3fb;
+  color: var(--color-primary);
+}
+
+.ingreso__encabezado h1 {
   color: var(--color-secondary);
-  font-size: clamp(24px, 4vw, 30px);
+  font-size: clamp(24px, 2.4vw, 30px);
   line-height: 1.2;
 }
 
-.ingreso__lead {
-  margin-top: var(--space-2);
+.ingreso__encabezado p {
+  margin-top: var(--space-1);
   color: var(--color-text-secondary);
   font-size: 16px;
 }
@@ -37,27 +168,44 @@
   gap: var(--space-4);
 }
 
-.ingreso__clave {
+/* Campos con ícono a la izquierda */
+.ingreso__control {
   position: relative;
 }
 
-.ingreso__clave .input {
+.ingreso__control .input {
   width: 100%;
-  padding-right: 96px;
+  min-height: 52px;
+  padding-left: 48px;
+  font-size: 17px;
+}
+
+.ingreso__control-icono {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.ingreso__control #ing-clave {
+  padding-right: 56px;
 }
 
 .ingreso__ver {
   position: absolute;
   top: 50%;
-  right: var(--space-2);
+  right: 4px;
   transform: translateY(-50%);
-  min-height: 40px;
-  padding: 0 var(--space-3);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: var(--radius-control);
   background: none;
   color: var(--color-primary);
-  font-weight: 600;
   cursor: pointer;
 }
 
@@ -65,9 +213,129 @@
   background: #eaf3fb;
 }
 
+.ingreso__mayus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  color: var(--color-warning);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .ingreso__btn {
   min-height: 56px;
-  font-size: 20px;
+  margin-top: var(--space-1);
+  font-size: 19px;
+}
+
+.ingreso__btn svg {
+  order: 1;
+}
+
+/* Usuarios de demostración */
+.ingreso__prueba {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ingreso__prueba h2 {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ingreso__accesos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ingreso__acceso {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingreso__acceso strong {
+  font-size: 15px;
+}
+
+.ingreso__acceso span {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ingreso__acceso:hover,
+.ingreso__acceso--activo {
+  border-color: var(--color-primary);
+  background: #eaf3fb;
+}
+
+.ingreso__todos {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.ingreso__todos summary {
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.ingreso__todos p {
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.ingreso__todos ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ingreso__usar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingreso__usar:hover {
+  background: #eaf3fb;
+}
+
+.ingreso__todos code {
+  color: var(--color-secondary);
+  font-weight: 600;
 }
 
 .ingreso__nota {
@@ -83,52 +351,99 @@
   color: var(--color-info);
 }
 
-.ingreso__demo {
-  border-top: 1px solid var(--color-border-soft);
-  padding-top: var(--space-4);
-  font-size: 14px;
-  color: var(--color-text-secondary);
+/* Tablet: la marca pasa a ser una franja arriba */
+@media (max-width: 960px) {
+  .ingreso {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .ingreso__marca {
+    gap: var(--space-4);
+    padding: var(--space-6) clamp(16px, 5vw, 48px);
+  }
+
+  .ingreso__marca-contenido {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4) var(--space-6);
+    max-width: none;
+  }
+
+  .ingreso__marca-texto h2 {
+    font-size: clamp(22px, 3.4vw, 30px);
+  }
+
+  .ingreso__beneficios,
+  .ingreso__marca-pie {
+    display: none;
+  }
+
+  .ingreso__panel {
+    align-items: start;
+  }
+
+  .ingreso__form-caja {
+    padding: clamp(24px, 4vw, 40px);
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: 0 12px 40px rgba(11, 36, 64, 0.08);
+  }
+
+  .ingreso__prueba {
+    background: var(--color-bg);
+  }
 }
 
-.ingreso__demo summary {
-  cursor: pointer;
-  color: var(--color-primary);
-  font-weight: 600;
+/* Celular: franja compacta y formulario a todo el ancho */
+@media (max-width: 560px) {
+  .ingreso__marca {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .ingreso__marca-texto p {
+    display: none;
+  }
+
+  .ingreso__marca-texto h2 {
+    font-size: 20px;
+  }
+
+  .ingreso__panel {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+
+  .ingreso__form-caja {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .ingreso__prueba {
+    background: var(--color-surface);
+  }
+
+  .ingreso__candado {
+    width: 44px;
+    height: 44px;
+  }
 }
 
-.ingreso__demo p {
-  margin: var(--space-3) 0 var(--space-2);
+@media (max-width: 360px) {
+  .ingreso__accesos {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.ingreso__demo ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.ingreso__usar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  width: 100%;
-  min-height: 40px;
-  padding: var(--space-2);
-  border: 0;
-  border-radius: var(--radius-control);
-  background: none;
-  color: var(--color-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.ingreso__usar:hover {
-  background: #eaf3fb;
-}
-
-.ingreso__demo code {
-  color: var(--color-secondary);
-  font-weight: 600;
+/* Pantallas grandes: formulario y textos un poco más amplios */
+@media (min-width: 1440px) {
+  .ingreso__form-caja {
+    width: min(480px, 100%);
+  }
+  .ingreso__beneficios li {
+    font-size: 17px;
+  }
 }

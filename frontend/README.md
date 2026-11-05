@@ -157,6 +157,12 @@ La cola se guarda en el navegador (localStorage) para que el tótem y el profesi
 | DEV-60 | **Consultorio del día:** el profesional elige dónde atiende al ingresar (se propone el de su agenda; los ocupados no se pueden elegir). Lo cambia desde el menú si no tiene un paciente en atención; sus pacientes en espera lo siguen. Villa Norte tiene ahora los consultorios 10 y 12 libres. | Ingresar con `lferrer` |
 | DEV-61 | **Llamado por voz:** "Número A023, consultorio 4", también al volver a llamar. Se activa o silencia en la sala. Nunca dice nombres. Si el navegador no tiene voz, queda el sonido. | `/sala` |
 
+### Sprint 6
+
+| ID | Qué se hizo | Dónde probarlo |
+|---|---|---|
+| DEV-72 | **Un box, una persona:** en "Atiendo en" los boxes ocupados figuran "Box 1 · Ocupado · Julia Benítez" y no se pueden elegir, igual que los consultorios (DEV-60). Al elegir "Sin box", al cerrar sesión (a mano o por inactividad) o al cambiar de sucursal, el box queda libre. Si dos personas eligen el mismo box casi a la vez, solo una lo toma y la otra ve "El box 1 lo está usando Julia Benítez. Elija otro.". La auditoría registra "Tomó un box de admisión" y "Dejó un box de admisión" con el box y el motivo. | `/secretaria` → "Atiendo en" con `jbenitez` y `mcastro` en dos navegadores o equipos (con `npm run dev`); Administración → Auditoría |
+
 ## Reglas implementadas
 
 - **Tolerancia de 15 minutos (RF-07):** hasta 15:00 de demora se acepta; desde 15:01 el turno queda cancelado y el tótem deriva a secretaría para un contraturno (`src/servicios/tolerancia.ts`, con pruebas).
@@ -186,6 +192,9 @@ La cola se guarda en el navegador (localStorage) para que el tótem y el profesi
 - **DEV-44:** todos los pacientes que llegan por el tótem o secretaría pasan por la cola de box; los derivados desde un consultorio no. Falta confirmar con SaludPlus si algunos servicios no pasan por box.
 - **DEV-55:** el control de datos personales revisa nombres de los pacientes del día, números largos y correos; no detecta todos los casos (por ejemplo, un apellido que no figura en la cola).
 - **DEV-60:** dos profesionales que eligen al mismo tiempo el mismo consultorio desde equipos distintos: lo resuelve el backend. Los consultorios 10 y 12 de Villa Norte y 5 de Güemes son de demostración.
+- **DEV-72:** mientras no hay backend, la ocupación de los boxes se comparte entre navegadores y equipos con un registro en la memoria del servidor de desarrollo (`/api/boxes` en `vite.config.ts`; cliente en `src/servicios/boxes.ts`). Solo existe con `npm run dev`: con `vite preview` o el sitio publicado cada navegador ve solo lo suyo. Si se reinicia `npm run dev`, todos los boxes quedan libres. La auditoría sigue guardándose en el navegador de cada persona.
+- **DEV-72:** si alguien cierra el navegador sin salir y no vuelve a abrirlo, el box queda ocupado hasta el día siguiente (la sesión vence por inactividad solo cuando ese equipo vuelve a abrir la página). Falta que dirección pueda liberar un box a mano.
+- **DEV-72:** se puede cerrar sesión con un paciente en el box: el box queda libre y el paciente sigue llamado; quien tome ese box lo ve y puede finalizarlo. Falta confirmar con SaludPlus si se prefiere bloquear la salida.
 - **DEV-58:** la pausa sigue activa hasta que el profesional reanuda, aunque pase el tiempo estimado (la sala muestra "se reanuda en breve").
 - Como el resto de la demo, estas reglas viven en el navegador; con el backend se validan en el servidor.
 

@@ -7,6 +7,7 @@ import { useSyncExternalStore } from 'react';
 import { borrar, escribirJSON, escucharClaves, leerJSON, parametroURL } from './almacen';
 import { configuracion, escucharConfiguracion, nombreSucursal, parametros, profesionalesDelDia, type UsuarioRegistrado } from './configuracion';
 import { registrarAuditoria } from './auditoria';
+import { dejarBox, dejarTodosLosBoxes } from './boxes';
 import { problemaConClave, resumenClave } from './claves';
 import { modificarUsuario, verificarCredenciales, type ResultadoCredenciales, type Usuario } from './usuarios';
 
@@ -96,11 +97,16 @@ export function abrirSesion(r: UsuarioRegistrado, sucursal: string) {
 export function cambiarSucursal(sucursal: string) {
   const g = leer();
   if (!g) return;
+  // DEV-72: el box de la sucursal anterior queda libre para otra persona.
+  if (g.sucursal !== sucursal) dejarBox(g.sucursal, g.usuario, 'al cambiar de sucursal');
   escribirJSON(CLAVE, { ...g, sucursal, ultimaActividad: Date.now() });
   avisar();
 }
 
-export function cerrarSesion() {
+/** DEV-72: al cerrar la sesión (a mano o por inactividad) el box queda libre para otra persona. */
+export function cerrarSesion(motivo = 'al cerrar sesión') {
+  const g = leer();
+  if (g) dejarTodosLosBoxes(g.usuario, motivo);
   borrar(CLAVE);
   avisar();
 }
@@ -137,7 +143,7 @@ export function registrarActividad() {
 export function controlarInactividad(): boolean {
   const g = leer();
   if (g && vencida(g)) {
-    cerrarSesion();
+    cerrarSesion('al cerrarse la sesión por inactividad');
     return true;
   }
   return false;

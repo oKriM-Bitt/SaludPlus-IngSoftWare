@@ -55,4 +55,6 @@ export const ETIQUETA_ACCION: Record<string, string> = {
   'cambio-consultorio': 'Cambio de consultorio del día', // DEV-60
   'derivacion-consultorio': 'Derivación desde el consultorio', // DEV-59
   'ausente-box': 'Ausente en el box de admisión', // DEV-44
+  'toma-box': 'Tomó un box de admisión', // DEV-72
+  'deja-box': 'Dejó un box de admisión',
 };

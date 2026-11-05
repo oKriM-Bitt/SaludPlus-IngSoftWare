@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../componentes/Icon';
+import { MarcaSaludPlus } from '../../componentes/Logo';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import { FormularioClave } from '../../componentes/FormularioClave';
@@ -122,7 +123,7 @@ export function IngresoPage() {
       <main className="ingreso__panel">
         <div className="ingreso__form-caja">
           <header className="ingreso__encabezado">
-            <Emblema />
+            <MarcaSaludPlus size={88} className="ingreso__emblema" />
             <span className="ingreso__nombre">SaludPlus</span>
             <h1>Ingreso del personal</h1>
           </header>
@@ -307,17 +308,6 @@ export function IngresoPage() {
         </div>
       </main>
     </div>
-  );
-}
-
-/** Logo de SaludPlus para el ingreso: la cruz de la marca en blanco sobre un cuadrado azul. */
-function Emblema() {
-  return (
-    <svg className="ingreso__emblema" viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="16" fill="var(--color-primary)" />
-      <rect x="25" y="13" width="14" height="38" rx="2" fill="#fff" />
-      <rect x="13" y="25" width="38" height="14" rx="2" fill="#fff" />
-    </svg>
   );
 }
 

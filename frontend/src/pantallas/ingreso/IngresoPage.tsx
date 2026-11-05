@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { Logo } from '../../componentes/Logo';
-import { Icon, type IconName } from '../../componentes/Icon';
+import { Icon } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import { FormularioClave } from '../../componentes/FormularioClave';
@@ -11,12 +10,6 @@ import { abrirSesion, cerrarSesion, comprobarIngreso, inactividadMinutos, usuari
 import { CLAVE_DEMO, ETIQUETA_ROL, puedeAcceder, usuariosDemo, type Usuario } from '../../servicios/usuarios';
 import { configuracion, nombreSucursal, profesionalesDelDia, sucursalPorId, type Rol, type UsuarioRegistrado } from '../../servicios/configuracion';
 import './ingreso.css';
-
-const BENEFICIOS: { icono: IconName; titulo: string; texto: string }[] = [
-  { icono: 'users', titulo: 'Admisión', texto: 'La cola del centro en tiempo real, sin listados en papel.' },
-  { icono: 'user-check', titulo: 'Consultorios', texto: 'Llamar al próximo paciente con un toque.' },
-  { icono: 'monitor', titulo: 'Sala de espera', texto: 'Número, consultorio y espera estimada a la vista.' },
-];
 
 /** Un usuario de prueba por rol para el ingreso rápido de la demo. */
 const accesosRapidos = () =>
@@ -29,7 +22,7 @@ type Etapa =
   | { tipo: 'sucursal'; registrado: UsuarioRegistrado }
   | { tipo: 'consultorio'; registrado: UsuarioRegistrado; sucursal: string }; // DEV-60
 
-/** Inicio de sesión del personal (#47, rediseño #80). El tótem y la sala no lo requieren. */
+/** Inicio de sesión del personal (#47, rediseño #80, simplificado con el logo en #89). El tótem y la sala no lo requieren. */
 export function IngresoPage() {
   const usuarioActual = useUsuario();
   const [params] = useSearchParams();
@@ -126,41 +119,13 @@ export function IngresoPage() {
 
   return (
     <div className="ingreso">
-      <aside className="ingreso__marca" aria-label="SaludPlus">
-        <div className="ingreso__marca-contenido">
-          <Logo size={44} />
-          <div className="ingreso__marca-texto">
-            <h2>Admisión y sala de espera</h2>
-            <p>Desde que el paciente llega al centro hasta que entra al consultorio.</p>
-          </div>
-          <ul className="ingreso__beneficios">
-            {BENEFICIOS.map((b) => (
-              <li key={b.titulo}>
-                <span className="ingreso__beneficio-icono">
-                  <Icon name={b.icono} size={24} />
-                </span>
-                <span>
-                  <strong>{b.titulo}</strong>
-                  {b.texto}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="ingreso__marca-pie">SaludPlus Obra Social · Seis centros médicos</p>
-      </aside>
-
       <main className="ingreso__panel">
         <div className="ingreso__form-caja">
-          <div className="ingreso__encabezado">
-            <span className="ingreso__candado">
-              <Icon name="lock" size={24} />
-            </span>
-            <div>
-              <h1>Ingreso del personal</h1>
-              <p>Admisión, consultorios y dirección.</p>
-            </div>
-          </div>
+          <header className="ingreso__encabezado">
+            <Emblema />
+            <span className="ingreso__nombre">SaludPlus</span>
+            <h1>Ingreso del personal</h1>
+          </header>
 
           {etapa.tipo === 'consultorio' ? (
             <>
@@ -298,51 +263,61 @@ export function IngresoPage() {
             <Button type="submit" className="ingreso__btn" icon={<Icon name="arrow-right" size={24} />} loading={enviando}>
               {enviando ? 'Ingresando…' : 'Ingresar'}
             </Button>
-            <p className="ingreso__olvido">
-              <Icon name="help-circle" size={18} /> ¿Olvidó su contraseña? Pida a dirección que la restablezca: le dará una temporal para cambiar al ingresar.
-            </p>
           </form>
 
-          <section className="ingreso__prueba" aria-labelledby="ing-prueba-titulo">
-            <h2 id="ing-prueba-titulo">Probar con un usuario de demostración</h2>
-            <div className="ingreso__accesos">
-              {accesosRapidos().map((u) => (
-                <button key={u.usuario} type="button" className={`ingreso__acceso ${usuario === u.usuario ? 'ingreso__acceso--activo' : ''}`} onClick={() => usarPrueba(u)}>
-                  <strong>{ETIQUETA_ROL[u.rol]}</strong>
-                  <span>{u.usuario}</span>
-                </button>
-              ))}
-            </div>
-            <details className="ingreso__todos">
-              <summary>Ver todos los usuarios de prueba</summary>
+          {/* #89: la ayuda y los usuarios de prueba quedan plegados para que la pantalla muestre solo lo necesario */}
+          <div className="ingreso__ayudas">
+            <details className="ingreso__ayuda">
+              <summary>¿Olvidó su contraseña?</summary>
+              <p>Pida a dirección que la restablezca: le dará una temporal para cambiar al ingresar.</p>
+            </details>
+            <details className="ingreso__ayuda">
+              <summary>Usuarios de demostración</summary>
               <p>
                 Contraseña para todos: <code>{CLAVE_DEMO}</code>. Datos ficticios.
               </p>
-              <ul>
-                {usuariosDemo().map((u) => (
-                  <li key={u.usuario}>
-                    <button type="button" className="ingreso__usar" onClick={() => usarPrueba(u)}>
-                      <code>{u.usuario}</code>
-                      <span>
-                        {u.nombre} · {ETIQUETA_ROL[u.rol]}
-                        {u.sucursales.length > 1 ? ` · ${u.sucursales.length} sucursales` : ''}
-                      </span>
-                    </button>
-                  </li>
+              <div className="ingreso__accesos">
+                {accesosRapidos().map((u) => (
+                  <button key={u.usuario} type="button" className={`ingreso__acceso ${usuario === u.usuario ? 'ingreso__acceso--activo' : ''}`} onClick={() => usarPrueba(u)}>
+                    <strong>{ETIQUETA_ROL[u.rol]}</strong>
+                    <span>{u.usuario}</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
+              <details className="ingreso__ayuda ingreso__ayuda--anidada">
+                <summary>Ver todos los usuarios de prueba</summary>
+                <ul className="ingreso__todos">
+                  {usuariosDemo().map((u) => (
+                    <li key={u.usuario}>
+                      <button type="button" className="ingreso__usar" onClick={() => usarPrueba(u)}>
+                        <code>{u.usuario}</code>
+                        <span>
+                          {u.nombre} · {ETIQUETA_ROL[u.rol]}
+                          {u.sucursales.length > 1 ? ` · ${u.sucursales.length} sucursales` : ''}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </details>
-          </section>
-
-          <p className="ingreso__nota">
-            <Icon name="info" size={20} />
-            La sesión se cierra sola después de {inactividadMinutos()} minutos sin uso. El tótem y la pantalla de sala no necesitan usuario.
-          </p>
+          </div>
           </>
           )}
         </div>
       </main>
     </div>
+  );
+}
+
+/** Logo de SaludPlus para el ingreso: la cruz de la marca en blanco sobre un cuadrado azul. */
+function Emblema() {
+  return (
+    <svg className="ingreso__emblema" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="16" fill="var(--color-primary)" />
+      <rect x="25" y="13" width="14" height="38" rx="2" fill="#fff" />
+      <rect x="13" y="25" width="38" height="14" rx="2" fill="#fff" />
+    </svg>
   );
 }
 

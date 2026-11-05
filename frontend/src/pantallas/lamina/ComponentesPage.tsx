@@ -3,6 +3,7 @@ import { Icon, type IconName } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import { StatusChip, type EstadoTurno } from '../../componentes/StatusChip';
+import { EstadoDatos } from '../../componentes/EstadoDatos';
 import './componentes.css';
 
 /** Lámina 05 · Componentes reutilizables: los mismos componentes que usan las pantallas. */
@@ -140,11 +141,12 @@ export function ComponentesPage() {
             </div>
             <span className="result-card__consultorio">Consultorio 4</span>
           </div>
-          <p className="comp__conexion comp__conexion--on">
-            <Icon name="wifi" size={20} /> Conectado
+          {/* #91: estado de los datos en lugar de "Conectado" */}
+          <p className="comp__conexion">
+            <EstadoDatos sinConexion={false} actualizadoEn={new Date(2026, 10, 5, 10, 32)} />
           </p>
-          <p className="comp__conexion comp__conexion--off">
-            <Icon name="wifi-off" size={20} /> Sin conexión – última actualización 10:00
+          <p className="comp__conexion">
+            <EstadoDatos sinConexion actualizadoEn={new Date(2026, 10, 5, 10, 0)} />
           </p>
         </section>
 

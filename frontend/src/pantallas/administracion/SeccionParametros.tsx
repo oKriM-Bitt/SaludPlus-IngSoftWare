@@ -5,6 +5,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { LIMITES, PARAMETROS_POR_DEFECTO, validarParametros, type Parametros } from '../../servicios/configuracion';
 import { cambiar } from './cambios';
 import { useConfiguracion } from './comun';
+import { useConfirmar } from '../../componentes/Confirmar';
 
 type Numericos = Exclude<keyof Parametros, 'motivosPrioridad'>;
 
@@ -15,6 +16,7 @@ export function SeccionParametros() {
   const [motivos, setMotivos] = useState(config.parametros.motivosPrioridad.join('\n'));
   const [errores, setErrores] = useState<Partial<Record<keyof Parametros, string>>>({});
   const [aviso, setAviso] = useState<string | null>(null);
+  const { confirmar, dialogo } = useConfirmar(); // #87
 
   const armar = (): Parametros => ({
     ...(Object.fromEntries(Object.entries(valores).map(([k, v]) => [k, v.trim() === '' ? NaN : Number(v)])) as Record<Numericos, number>),
@@ -34,7 +36,13 @@ export function SeccionParametros() {
     setAviso(`Se guardaron los parámetros (${cambios.length} cambios). Ya se aplican en todas las pantallas.`);
   };
 
-  const restaurar = () => {
+  const restaurar = async () => {
+    const acepta = await confirmar({
+      titulo: '¿Restaurar los valores por defecto?',
+      mensaje: 'Se reemplazan todos los parámetros por los acordados al inicio y se aplican enseguida en todas las pantallas.',
+      aceptar: 'Restaurar valores',
+    });
+    if (!acepta) return;
     setValores(aTexto(PARAMETROS_POR_DEFECTO));
     setMotivos(PARAMETROS_POR_DEFECTO.motivosPrioridad.join('\n'));
     setErrores({});
@@ -94,6 +102,7 @@ export function SeccionParametros() {
           </Button>
         </div>
       </form>
+      {dialogo}
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { ETIQUETA_ROL } from '../../servicios/usuarios';
 import { useUsuario } from '../../servicios/sesion';
 import { cambiar } from './cambios';
 import { Estado, useConfiguracion } from './comun';
+import { useConfirmar } from '../../componentes/Confirmar';
 
 type Edicion = { modo: 'nuevo' } | { modo: 'editar'; usuario: UsuarioRegistrado } | null;
 
@@ -17,8 +18,15 @@ export function SeccionUsuarios() {
   const yo = useUsuario();
   const [edicion, setEdicion] = useState<Edicion>(null);
   const [aviso, setAviso] = useState<{ titulo: string; texto: string; clave?: string } | null>(null);
+  const { confirmar, dialogo } = useConfirmar(); // #87
 
   const restablecer = async (u: UsuarioRegistrado) => {
+    const acepta = await confirmar({
+      titulo: `¿Restablecer la contraseña de ${u.nombre}?`,
+      mensaje: 'Su contraseña actual deja de funcionar. Se genera una temporal que tendrá que cambiar al ingresar.',
+      aceptar: 'Restablecer contraseña',
+    });
+    if (!acepta) return;
     const temporal = claveTemporal();
     const hash = await resumenClave(u.usuario, temporal);
     cambiar(`Contraseña restablecida: ${u.usuario}`, (c) => ({
@@ -33,7 +41,16 @@ export function SeccionUsuarios() {
     setAviso({ titulo: `${u.nombre} ya puede ingresar`, texto: 'Se reiniciaron los intentos fallidos.' });
   };
 
-  const alternarBaja = (u: UsuarioRegistrado) => {
+  const alternarBaja = async (u: UsuarioRegistrado) => {
+    if (u.activo) {
+      const acepta = await confirmar({
+        titulo: `¿Dar de baja a ${u.nombre}?`,
+        mensaje: 'Ya no va a poder ingresar. Sus registros anteriores se conservan y se puede reactivar.',
+        aceptar: 'Dar de baja',
+        peligro: true,
+      });
+      if (!acepta) return;
+    }
     cambiar(`${u.activo ? 'Baja' : 'Reactivación'} de usuario: ${u.usuario}`, (c) => ({ ...c, usuarios: c.usuarios.map((x) => (x.usuario === u.usuario ? { ...x, activo: !x.activo } : x)) }));
     setAviso({ titulo: u.activo ? `${u.nombre} quedó de baja` : `${u.nombre} se reactivó`, texto: u.activo ? 'Ya no puede ingresar. Sus registros anteriores se conservan.' : 'Puede volver a ingresar con su contraseña.' });
   };
@@ -123,6 +140,7 @@ export function SeccionUsuarios() {
           </tbody>
         </table>
       </div>
+      {dialogo}
     </section>
   );
 }

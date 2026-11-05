@@ -29,21 +29,6 @@
   height: 1.3em;
 }
 
-.prof__conexion {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: clamp(14px, 1.56vw, 16px);
-}
-
-.prof__conexion--on {
-  color: var(--color-success);
-}
-
-.prof__conexion--off {
-  color: var(--color-warning);
-}
-
 .prof__main {
   flex: 1;
   width: 100%;

@@ -4,6 +4,7 @@ import { Icon } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
 import { StatusChip } from '../../componentes/StatusChip';
+import { useConfirmar } from '../../componentes/Confirmar';
 import { Indicador, PaginaInterna } from '../../componentes/PaginaInterna';
 import { useUsuario } from '../../servicios/sesion';
 import {
@@ -30,6 +31,7 @@ type Decision = 'no-atendido' | 'reprogramado';
 /** #69: cierre del día de la sucursal, con los pendientes y el resumen de la jornada. */
 export function CierrePage() {
   const usuario = useUsuario()!;
+  const { confirmar, dialogo } = useConfirmar(); // #87
   const [cierre, setCierre] = useState<Cierre | null>(() => cierreDeHoy());
   const [pendientes, setPendientes] = useState<Admision[]>(() => pendientesDelDia());
   const [resumen, setResumen] = useState<ResumenDia>(() => resumenDeHoy());
@@ -73,6 +75,12 @@ export function CierrePage() {
   };
 
   const reabrir = async () => {
+    const acepta = await confirmar({
+      titulo: '¿Reabrir el día?',
+      mensaje: 'Se vuelven a registrar llegadas en la sucursal y el cierre de hoy queda sin efecto hasta que lo cierre de nuevo.',
+      aceptar: 'Reabrir el día',
+    });
+    if (!acepta) return;
     setEnviando(true);
     await reabrirDia();
     setCierre(null);
@@ -202,6 +210,7 @@ export function CierrePage() {
           Para ver otros días o todas las sucursales, vaya a <Link to="/reportes">Reportes</Link>.
         </p>
       )}
+      {dialogo}
     </PaginaInterna>
   );
 }

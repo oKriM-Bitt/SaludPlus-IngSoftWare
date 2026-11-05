@@ -5,16 +5,27 @@ import { Alerta } from '../../componentes/Alerta';
 import type { Sucursal } from '../../servicios/configuracion';
 import { cambiar, slug } from './cambios';
 import { Estado, useConfiguracion } from './comun';
+import { useConfirmar } from '../../componentes/Confirmar';
 
 /** #56 y #60: sucursales, con los enlaces para configurar el tótem y la sala de cada una. */
 export function SeccionSucursales() {
   const config = useConfiguracion();
   const [editando, setEditando] = useState<Sucursal | 'nueva' | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const { confirmar, dialogo } = useConfirmar(); // #87
 
-  const alternar = (s: Sucursal) => {
+  const alternar = async (s: Sucursal) => {
     const activas = config.sucursales.filter((x) => x.activa).length;
     if (s.activa && activas === 1) return setAviso('Tiene que quedar al menos una sucursal activa.');
+    if (s.activa) {
+      const acepta = await confirmar({
+        titulo: `¿Dar de baja ${s.nombre}?`,
+        mensaje: 'Deja de aparecer en el ingreso, en el tótem y en la sala. Los datos se conservan y se puede reactivar.',
+        aceptar: 'Dar de baja',
+        peligro: true,
+      });
+      if (!acepta) return;
+    }
     cambiar(`${s.activa ? 'Baja' : 'Reactivación'} de sucursal: ${s.nombre}`, (c) => ({ ...c, sucursales: c.sucursales.map((x) => (x.id === s.id ? { ...x, activa: !x.activa } : x)) }));
     setAviso(s.activa ? `${s.nombre} quedó de baja: ya no aparece en el ingreso ni en los equipos.` : `${s.nombre} se reactivó.`);
   };
@@ -68,6 +79,7 @@ export function SeccionSucursales() {
       <p className="tarjeta__ayuda">
         Cada tótem y cada TV de sala se configuran una sola vez abriéndolos con el enlace de su sucursal: el equipo la recuerda.
       </p>
+      {dialogo}
     </section>
   );
 }

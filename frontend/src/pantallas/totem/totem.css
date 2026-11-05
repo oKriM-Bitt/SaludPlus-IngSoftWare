@@ -494,4 +494,7 @@
     font-size: 40pt;
     font-weight: 700;
   }
+  .ticket-impresion .logo {
+    align-self: center;
+  }
 }

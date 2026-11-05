@@ -1,12 +1,28 @@
-/* Logo */
+/* Logo: red de seis centros + "SaludPlus" en Outfit */
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 0.35em;
-  font-weight: 700;
+  gap: 0.4em;
   color: var(--color-secondary);
-  letter-spacing: -0.01em;
   line-height: 1;
+}
+
+.logo svg {
+  flex-shrink: 0;
+}
+
+.logo__text {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.logo--claro {
+  color: #fff;
+}
+
+.logo--mono {
+  color: #000;
 }
 
 /* Botones */

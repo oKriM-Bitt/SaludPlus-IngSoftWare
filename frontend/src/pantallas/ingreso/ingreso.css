@@ -50,15 +50,14 @@
 }
 
 .ingreso__emblema {
-  width: 72px;
-  height: 72px;
   margin-bottom: var(--space-1);
 }
 
 .ingreso__nombre {
   color: var(--color-secondary);
-  font-size: 32px;
-  font-weight: 800;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-size: 36px;
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1;
 }

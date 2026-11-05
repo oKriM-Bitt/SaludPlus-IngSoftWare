@@ -3,6 +3,7 @@ import { Button } from '../../componentes/Button';
 import { Icon } from '../../componentes/Icon';
 import { deshacerLlegada, esperaDe, puedeDeshacer, SEGUNDOS_PARA_DESHACER, sinProfesional, SinConexionError, type Admision } from '../../servicios/turnos';
 import { datosTicket, prepararImpresion, yaImpreso, type ResultadoImpresion } from '../../servicios/ticket';
+import { Logo } from '../../componentes/Logo';
 
 type Props = {
   admision: Admision;
@@ -86,7 +87,7 @@ export function AccionesRegistro({ admision, recienRegistrada, onDeshecho }: Pro
 
       {/* Solo se ve al imprimir: número, destino, llegada y espera. Sin nombre ni datos de salud. */}
       <div className="ticket-impresion" aria-hidden="true">
-        <strong>SaludPlus</strong>
+        <Logo size={32} variante="mono" />
         <span className="ticket-impresion__numero">{ticket.numero}</span>
         <span>{ticket.destino}</span>
         <span>Llegada: {ticket.llegada}</span>

@@ -26,6 +26,7 @@ import {
   type Consultorio,
 } from './configuracion';
 import { avisosVigentes, CLAVE_AVISOS } from './avisos';
+import { boxDelUsuario, CLAVE_BOXES, dejarBox, nombreDeUsuario, ocupacionDeBoxes, tomarBox } from './boxes';
 import { CLAVE_AUDITORIA, obtenerAuditoria, registrarAuditoria, type RegistroAuditoria } from './auditoria';
 import { quienSoy, sucursalActiva } from './contexto';
 import { escucharSesion } from './sesion';
@@ -351,7 +352,6 @@ const CLAVE = 'saludplus.admisiones';
 const CLAVE_ESTADOS = 'saludplus.profesionales.estado';
 const CLAVE_CIERRES = 'saludplus.cierres';
 const CLAVE_PAUSAS = 'saludplus.pausas'; // DEV-58
-const CLAVE_BOXES = 'saludplus.boxes.dia'; // DEV-44
 let memoria: Record<string, Admision> = admisionesIniciales();
 
 // Si cambia la agenda, los pacientes de la demo toman el consultorio nuevo.
@@ -1374,18 +1374,24 @@ export const boxesDeSucursal = (sucursal = sucursalActiva()) =>
     .boxes.filter((b) => b.sucursal === sucursal && b.activo)
     .sort((a, b) => Number(a.numero) - Number(b.numero));
 
-const prefijoBox = (sucursal: string) => `${hoy()}|${sucursal}|`;
-
 /** Qué secretaria atiende en cada box hoy: número de box → usuario. */
-export function ocupacionBoxes(sucursal = sucursalActiva()): Record<string, string> {
-  const prefijo = prefijoBox(sucursal);
-  const todos = leerJSON<Record<string, string>>(CLAVE_BOXES, {});
-  return Object.fromEntries(Object.entries(todos).filter(([k]) => k.startsWith(prefijo)).map(([k, usuario]) => [k.slice(prefijo.length), usuario]));
-}
+export const ocupacionBoxes = (sucursal = sucursalActiva()): Record<string, string> => ocupacionDeBoxes(sucursal);
 
 /** Box en el que atiende hoy el usuario, o null. */
-export function boxDe(usuario: string, sucursal = sucursalActiva()): string | null {
-  return Object.entries(ocupacionBoxes(sucursal)).find(([, u]) => u === usuario)?.[0] ?? null;
+export const boxDe = (usuario: string, sucursal = sucursalActiva()): string | null => boxDelUsuario(usuario, sucursal);
+
+export type OpcionBox = { numero: string; id: string; ocupadoPor: string | null; mio: boolean };
+
+/**
+ * DEV-72: boxes que puede elegir la secretaria, igual que la elección de consultorio (DEV-60):
+ * los que usa otra persona figuran ocupados, con su nombre, y no se pueden elegir.
+ */
+export function opcionesDeBox(usuario: string, sucursal = sucursalActiva()): OpcionBox[] {
+  const ocupacion = ocupacionDeBoxes(sucursal);
+  return boxesDeSucursal(sucursal).map((b) => {
+    const quien = ocupacion[b.numero];
+    return { numero: b.numero, id: b.id, mio: quien === usuario, ocupadoPor: quien && quien !== usuario ? nombreDeUsuario(quien) : null };
+  });
 }
 
 /** Paciente que está ahora en el box, si hay uno. */
@@ -1393,20 +1399,24 @@ export function pacienteEnBox(numeroBox: string): Admision | null {
   return Object.values(admisionesVigentes()).find((a) => a.box?.numero === numeroBox && a.box.estado === 'llamado') ?? null;
 }
 
-/** La secretaria elige (o deja, con null) el box donde atiende. */
+/**
+ * La secretaria elige (o deja, con null) el box donde atiende. DEV-72: el estado se vuelve a
+ * leer al guardar, así si otra persona lo tomó mientras tanto recibe el aviso de quién lo usa.
+ */
 export async function elegirBox(usuario: string, numeroBox: string | null): Promise<void> {
   verificarConexion();
   await esperar(300);
   const sucursal = sucursalActiva();
   const actual = boxDe(usuario, sucursal);
-  if (actual && actual !== numeroBox && pacienteEnBox(actual)) throw new OperacionNoPermitidaError('Finalice la atención del box antes de cambiar.');
-  const ocupacion = ocupacionBoxes(sucursal);
-  if (numeroBox && ocupacion[numeroBox] && ocupacion[numeroBox] !== usuario) throw new OperacionNoPermitidaError(`El box ${numeroBox} lo está usando ${ocupacion[numeroBox]}.`);
-  if (numeroBox && !boxesDeSucursal(sucursal).some((b) => b.numero === numeroBox)) throw new OperacionNoPermitidaError('Ese box no existe en esta sucursal.');
-  const todos = leerJSON<Record<string, string>>(CLAVE_BOXES, {});
-  if (actual) delete todos[prefijoBox(sucursal) + actual];
-  if (numeroBox) todos[prefijoBox(sucursal) + numeroBox] = usuario;
-  escribirJSON(CLAVE_BOXES, todos);
+  if (actual === numeroBox) return;
+  if (actual && pacienteEnBox(actual)) throw new OperacionNoPermitidaError('Finalice la atención del box antes de cambiar.');
+  if (!numeroBox) {
+    dejarBox(sucursal, usuario);
+    return;
+  }
+  if (!boxesDeSucursal(sucursal).some((b) => b.numero === numeroBox)) throw new OperacionNoPermitidaError('Ese box no existe en esta sucursal.');
+  const r = await tomarBox(sucursal, numeroBox, usuario);
+  if (!r.ok) throw new OperacionNoPermitidaError(`El box ${numeroBox} lo está usando ${nombreDeUsuario(r.ocupadoPor)}. Elija otro.`);
 }
 
 /**

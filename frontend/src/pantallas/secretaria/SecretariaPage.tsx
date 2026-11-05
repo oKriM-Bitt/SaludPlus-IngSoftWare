@@ -21,7 +21,7 @@ import {
   llamarAlBox,
   marcarPrioridad,
   minutosRestantesPausa,
-  ocupacionBoxes,
+  opcionesDeBox,
   PacienteEnAtencionError,
   PacienteNoDisponibleError,
   pacienteEnBox,
@@ -211,7 +211,7 @@ export function SecretariaPage() {
   const miBox = boxDe(yo);
   const enMiBox = miBox ? pacienteEnBox(miBox) : null;
   const colaBox = carga === 'ok' || cola ? colaDeBox() : [];
-  const ocupacion = ocupacionBoxes();
+  const opcionesBox = opcionesDeBox(yo); // DEV-72: ocupados con el nombre de quien atiende
   // DEV-55: avisos generales vigentes en la sala de esta sucursal.
   const avisosSala: AvisoSala[] = usuario ? avisosVigentes(usuario.sucursal, ahora) : [];
 
@@ -665,10 +665,9 @@ export function SecretariaPage() {
                   }}
                 >
                   <option value="">Sin box (solo panel)</option>
-                  {boxesDeSucursal().map((b) => (
-                    <option key={b.id} value={b.numero} disabled={!!ocupacion[b.numero] && ocupacion[b.numero] !== yo}>
-                      Box {b.numero}
-                      {ocupacion[b.numero] && ocupacion[b.numero] !== yo ? ` · ocupado por ${ocupacion[b.numero]}` : ''}
+                  {opcionesBox.map((b) => (
+                    <option key={b.id} value={b.numero} disabled={!!b.ocupadoPor}>
+                      {b.ocupadoPor ? `Box ${b.numero} · Ocupado · ${b.ocupadoPor}` : b.mio ? `Box ${b.numero}` : `Box ${b.numero} · Libre`}
                     </option>
                   ))}
                 </select>

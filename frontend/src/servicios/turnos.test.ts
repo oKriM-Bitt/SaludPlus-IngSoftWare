@@ -69,7 +69,7 @@ describe('llamado a los boxes de admisión (DEV-44)', () => {
   it('cada secretaria elige su box y no puede tomar uno ocupado', async () => {
     await ya(T.elegirBox('jbenitez', '1'));
     expect(T.boxDe('jbenitez')).toBe('1');
-    await expect(ya(T.elegirBox('mcastro', '1'))).rejects.toThrow(/lo está usando jbenitez/);
+    await expect(ya(T.elegirBox('mcastro', '1'))).rejects.toThrow(/lo está usando Julia Benítez/);
     await ya(T.elegirBox('mcastro', '2'));
     expect(T.ocupacionBoxes()).toEqual({ '1': 'jbenitez', '2': 'mcastro' });
   });
@@ -94,6 +94,74 @@ describe('llamado a los boxes de admisión (DEV-44)', () => {
     const ausente = await ya(T.ausenteEnBox(otra));
     expect(ausente.estado).toBe('ausente');
     expect(T.pacienteEnBox('1')).toBeNull();
+  });
+});
+
+describe('ocupación de los boxes de admisión (DEV-72)', () => {
+  const auditoria = (accion: string) => T.obtenerAuditoria().filter((r) => r.accion === accion);
+
+  it('los boxes ocupados figuran con el nombre de quien atiende y no se pueden elegir', async () => {
+    await ya(T.elegirBox('jbenitez', '1'));
+    const paraMarcela = T.opcionesDeBox('mcastro');
+    expect(paraMarcela.find((b) => b.numero === '1')).toMatchObject({ ocupadoPor: 'Julia Benítez', mio: false });
+    expect(paraMarcela.find((b) => b.numero === '2')).toMatchObject({ ocupadoPor: null });
+    // Para quien lo tiene, su box no figura ocupado.
+    expect(T.opcionesDeBox('jbenitez').find((b) => b.numero === '1')).toMatchObject({ ocupadoPor: null, mio: true });
+    await expect(ya(T.elegirBox('mcastro', '1'))).rejects.toThrow('El box 1 lo está usando Julia Benítez. Elija otro.');
+    expect(T.boxDe('mcastro')).toBeNull();
+  });
+
+  it('si dos personas eligen el mismo box casi a la vez, solo una lo toma y la otra recibe el aviso', async () => {
+    // Las dos vieron el box 1 libre y lo eligen antes de que termine la primera.
+    const julia = T.elegirBox('jbenitez', '1');
+    const marcela = T.elegirBox('mcastro', '1');
+    const resultados = await ya(Promise.allSettled([julia, marcela]));
+    expect(resultados[0].status).toBe('fulfilled');
+    expect(resultados[1]).toMatchObject({ status: 'rejected', reason: { message: 'El box 1 lo está usando Julia Benítez. Elija otro.' } });
+    expect(T.ocupacionBoxes()).toEqual({ '1': 'jbenitez' });
+    expect(auditoria('toma-box')).toHaveLength(1);
+  });
+
+  it('al dejar el box queda libre para otra persona', async () => {
+    await ya(T.elegirBox('jbenitez', '1'));
+    await ya(T.elegirBox('jbenitez', null));
+    expect(T.ocupacionBoxes()).toEqual({});
+    await ya(T.elegirBox('mcastro', '1'));
+    expect(T.boxDe('mcastro')).toBe('1');
+  });
+
+  it('al cambiar de box deja el anterior libre', async () => {
+    await ya(T.elegirBox('jbenitez', '1'));
+    await ya(T.elegirBox('jbenitez', '2'));
+    expect(T.ocupacionBoxes()).toEqual({ '2': 'jbenitez' });
+  });
+
+  it('al cerrar sesión el box queda libre', async () => {
+    const S = await import('./sesion');
+    S.abrirSesion(C.configuracion().usuarios.find((u) => u.usuario === 'jbenitez')!, 'villa-norte');
+    await ya(T.elegirBox('jbenitez', '1'));
+    S.cerrarSesion();
+    expect(T.ocupacionBoxes()).toEqual({});
+    expect(T.opcionesDeBox('mcastro').every((b) => b.ocupadoPor === null)).toBe(true);
+    expect(auditoria('deja-box').slice(-1)[0]).toMatchObject({ usuario: 'jbenitez', box: '1', detalle: 'Box 1 · al cerrar sesión' });
+  });
+
+  it('la auditoría registra quién tomó y quién dejó cada box', async () => {
+    await ya(T.elegirBox('jbenitez', '1'));
+    await ya(T.elegirBox('jbenitez', null));
+    await ya(T.elegirBox('mcastro', '1'));
+    expect(auditoria('toma-box').map((r) => [r.usuario, r.box])).toEqual([
+      ['jbenitez', '1'],
+      ['mcastro', '1'],
+    ]);
+    expect(auditoria('deja-box').map((r) => [r.usuario, r.box, r.detalle])).toEqual([['jbenitez', '1', 'Box 1 · lo dejó libre']]);
+  });
+
+  it('no puede dejar el box con un paciente en atención', async () => {
+    await ya(T.elegirBox('jbenitez', '1'));
+    await ya(T.llamarAlBox('1'));
+    await expect(ya(T.elegirBox('jbenitez', null))).rejects.toThrow(/Finalice la atención del box/);
+    expect(T.boxDe('jbenitez')).toBe('1');
   });
 });
 

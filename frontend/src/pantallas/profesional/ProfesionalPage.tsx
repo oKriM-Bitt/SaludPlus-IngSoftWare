@@ -6,6 +6,8 @@ import { StatusChip } from '../../componentes/StatusChip';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
 import { MarcaPrioridad } from '../../componentes/MarcaPrioridad';
+import { useConfirmar } from '../../componentes/Confirmar';
+import { EstadoDatos } from '../../componentes/EstadoDatos';
 import { useUsuario } from '../../servicios/sesion';
 import { profesionalesDelDia } from '../../servicios/configuracion';
 import {
@@ -66,6 +68,7 @@ export function ProfesionalPage() {
 
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' });
   const [accion, setAccion] = useState<Accion | null>(null);
+  const { confirmar, dialogo } = useConfirmar(); // #87
   const [confirmacion, setConfirmacion] = useState<string | null>(null);
   const [alerta, setAlerta] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState<Pendiente | null>(null);
@@ -226,7 +229,8 @@ export function ProfesionalPage() {
   const alPresionar = useRef<(e: KeyboardEvent) => void>(() => {});
   alPresionar.current = (e: KeyboardEvent) => {
     const atajo = atajoDeTecla(e, e.target as HTMLElement | null);
-    if (!atajo || pendiente) return;
+    // Con una ventana abierta (confirmación, pausa, derivar) los atajos no actúan.
+    if (!atajo || pendiente || document.querySelector('[aria-modal="true"]')) return;
     e.preventDefault();
     if (atajo === 'ir-a-lista') return enfocarFila(filaConFoco);
     if (atajo === 'llamar-siguiente') {
@@ -268,17 +272,7 @@ export function ProfesionalPage() {
       <header className="prof__header">
         <Logo size={40} />
         <span className="prof__header-derecha">
-        {sinConexion ? (
-          <span className="prof__conexion prof__conexion--off">
-            <Icon name="wifi-off" size={24} />
-            {textoSinConexion}
-          </span>
-        ) : (
-          <span className="prof__conexion prof__conexion--on">
-            <Icon name="wifi" size={24} />
-            Conectado
-          </span>
-        )}
+        <EstadoDatos sinConexion={sinConexion} actualizadoEn={ultimaActualizacion} />
         <MenuUsuario />
         </span>
       </header>
@@ -437,7 +431,15 @@ export function ProfesionalPage() {
                     loading={accion === 'ausente'}
                     disabled={!puedeMarcarAusente || (!puedeAtender && accion !== 'ausente')}
                     aria-describedby={puedeMarcarAusente ? undefined : 'prof-ayuda-ausente'}
-                    onClick={() => ejecutar('ausente', () => marcarAusente(enAtencion), `${enAtencion.numero} quedó como ausente. La secretaría lo ve en la cola.`)}
+                    onClick={async () => {
+                      const acepta = await confirmar({
+                        titulo: `¿Marcar a ${enAtencion.numero} como ausente?`,
+                        mensaje: 'Deja de estar en su cola y la secretaría lo ve como ausente.',
+                        aceptar: 'Marcar como ausente',
+                        peligro: true,
+                      });
+                      if (acepta) ejecutar('ausente', () => marcarAusente(enAtencion), `${enAtencion.numero} quedó como ausente. La secretaría lo ve en la cola.`);
+                    }}
                   >
                     {accion === 'ausente' ? 'Registrando…' : 'No se presentó'}
                   </Button>
@@ -642,6 +644,7 @@ export function ProfesionalPage() {
       {derivando && enAtencion && (
         <DerivarPaciente admision={enAtencion} actual={datos.nombre} especialidad={datos.especialidad} onCancelar={() => setDerivando(false)} onConfirmar={derivar} />
       )}
+      {dialogo}
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { StatusChip, type EstadoTurno } from '../../componentes/StatusChip';
 import { MenuUsuario } from '../../componentes/MenuUsuario';
 import { TiempoEspera } from '../../componentes/TiempoEspera';
 import { MarcaPrioridad } from '../../componentes/MarcaPrioridad';
+import { useConfirmar } from '../../componentes/Confirmar';
+import { EstadoDatos } from '../../componentes/EstadoDatos';
 import {
   anularLlegada,
   asignarProfesional,
@@ -133,6 +135,7 @@ const esperando = (a: Admision) => a.estado === 'en-espera';
 
 export function SecretariaPage() {
   const usuario = useUsuario();
+  const { confirmar, dialogo } = useConfirmar(); // #87
   const [carga, setCarga] = useState<Carga>('cargando');
   const [cola, setCola] = useState<ColaCentro | null>(null);
   const [ahora, setAhora] = useState(new Date());
@@ -449,17 +452,7 @@ export function SecretariaPage() {
           <Icon name="building" size={24} />
           {usuario?.centro}
         </span>
-        {sinConexion ? (
-          <span className="sec__header-item sec__conexion--off">
-            <Icon name="wifi-off" size={24} />
-            Sin conexión{cola ? ` – última actualización ${horaDatos}` : ''}
-          </span>
-        ) : (
-          <span className="sec__header-item sec__conexion--on">
-            <Icon name="wifi" size={24} />
-            Conectado
-          </span>
-        )}
+        <EstadoDatos className="sec__conexion" sinConexion={sinConexion} actualizadoEn={cola?.actualizadoEn ?? null} />
         <span className="sec__usuaria">
           <MenuUsuario />
         </span>
@@ -718,7 +711,15 @@ export function SecretariaPage() {
                     loading={accionBox === 'ausente'}
                     disabled={!operativo || enMiBox.box!.llamados < LLAMADOS_ANTES_DE_AUSENTE || (accionBox !== null && accionBox !== 'ausente')}
                     title={enMiBox.box!.llamados < LLAMADOS_ANTES_DE_AUSENTE ? `Disponible después de ${LLAMADOS_ANTES_DE_AUSENTE} llamados` : undefined}
-                    onClick={() => operarBox('ausente', () => ausenteEnBox(enMiBox), () => ({ tono: 'success', titulo: `${enMiBox.numero} quedó como ausente` }))}
+                    onClick={async () => {
+                      const acepta = await confirmar({
+                        titulo: `¿Marcar a ${enMiBox.numero} como ausente?`,
+                        mensaje: 'Deja de estar en la cola del box y queda como ausente.',
+                        aceptar: 'Marcar como ausente',
+                        peligro: true,
+                      });
+                      if (acepta) operarBox('ausente', () => ausenteEnBox(enMiBox), () => ({ tono: 'success', titulo: `${enMiBox.numero} quedó como ausente` }));
+                    }}
                   >
                     No se presentó
                   </Button>
@@ -764,7 +765,14 @@ export function SecretariaPage() {
                       type="button"
                       className="sec__link"
                       disabled={!operativo}
-                      onClick={() => {
+                      onClick={async () => {
+                        const acepta = await confirmar({
+                          titulo: '¿Quitar el aviso de la sala?',
+                          mensaje: `"${a.texto}" deja de verse en la pantalla de sala.`,
+                          aceptar: 'Quitar aviso',
+                          peligro: true,
+                        });
+                        if (!acepta) return;
                         quitarAviso(a.id, yo);
                         setMensaje({ tono: 'success', titulo: 'Se quitó el aviso de la sala' });
                         setAhora(new Date());
@@ -1051,6 +1059,7 @@ export function SecretariaPage() {
           onConfirmar={(estado, minutos, derivarA) => guardarEstadoProfesional(modal.profesional, estado, minutos, derivarA)}
         />
       )}
+      {dialogo}
     </div>
   );
 }

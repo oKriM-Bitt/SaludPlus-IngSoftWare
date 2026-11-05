@@ -5,6 +5,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { consultorioPorId, nombreSucursal, type Asignacion, type ProfesionalRegistrado } from '../../servicios/configuracion';
 import { cambiar, DIAS, slug } from './cambios';
 import { Estado, useConfiguracion } from './comun';
+import { useConfirmar } from '../../componentes/Confirmar';
 
 /** #60: profesionales y en qué consultorio atiende cada uno, qué días y en qué horario. */
 export function SeccionProfesionales() {
@@ -12,8 +13,18 @@ export function SeccionProfesionales() {
   const [editando, setEditando] = useState<ProfesionalRegistrado | 'nuevo' | null>(null);
   const [agenda, setAgenda] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const { confirmar, dialogo } = useConfirmar(); // #87
 
-  const alternar = (p: ProfesionalRegistrado) => {
+  const alternar = async (p: ProfesionalRegistrado) => {
+    if (p.activo) {
+      const acepta = await confirmar({
+        titulo: `¿Dar de baja a ${p.nombre}?`,
+        mensaje: 'Deja de aparecer en las colas, en el ingreso y en la sala. Sus atenciones anteriores se conservan y se puede reactivar.',
+        aceptar: 'Dar de baja',
+        peligro: true,
+      });
+      if (!acepta) return;
+    }
     cambiar(`${p.activo ? 'Baja' : 'Reactivación'} de profesional: ${p.nombre}`, (c) => ({ ...c, profesionales: c.profesionales.map((x) => (x.id === p.id ? { ...x, activo: !x.activo } : x)) }));
     setAviso(p.activo ? `${p.nombre} quedó de baja: deja de aparecer en las colas y en la sala. Sus atenciones anteriores se conservan.` : `${p.nombre} se reactivó.`);
   };
@@ -57,11 +68,13 @@ export function SeccionProfesionales() {
           );
         })}
       </ul>
+      {dialogo}
     </section>
   );
 }
 
 function Agenda({ profesional, asignaciones, onAviso }: { profesional: ProfesionalRegistrado; asignaciones: Asignacion[]; onAviso: (t: string) => void }) {
+  const { confirmar, dialogo } = useConfirmar(); // #87
   const config = useConfiguracion();
   const consultorios = config.consultorios.filter((c) => c.activo);
   const [consultorio, setConsultorio] = useState(consultorios[0]?.id ?? '');
@@ -91,7 +104,14 @@ function Agenda({ profesional, asignaciones, onAviso }: { profesional: Profesion
     onAviso(`Se agregó a la agenda de ${profesional.nombre}: ${describir(nueva)}.`);
   };
 
-  const quitar = (a: Asignacion) => {
+  const quitar = async (a: Asignacion) => {
+    const acepta = await confirmar({
+      titulo: '¿Quitar de la agenda?',
+      mensaje: `${profesional.nombre} deja de atender en ${describir(a)}.`,
+      aceptar: 'Quitar de la agenda',
+      peligro: true,
+    });
+    if (!acepta) return;
     cambiar(`Agenda de ${profesional.nombre}: se quitó ${describir(a)}`, (c) => ({ ...c, asignaciones: c.asignaciones.filter((x) => x.id !== a.id) }));
     onAviso(`Se quitó de la agenda de ${profesional.nombre}: ${describir(a)}.`);
   };
@@ -153,6 +173,7 @@ function Agenda({ profesional, asignaciones, onAviso }: { profesional: Profesion
           </Button>
         </div>
       </form>
+      {dialogo}
     </div>
   );
 }

@@ -8,8 +8,9 @@ import { tienePacienteEnAtencion } from '../servicios/turnos';
 import { Modal } from '../pantallas/secretaria/Modal';
 import { Alerta } from './Alerta';
 import { ElegirConsultorio } from './ElegirConsultorio';
+import { useConfirmar } from './Confirmar';
 
-/** Menú de navegación por rol (#48): usuario, sucursal (#56), opciones permitidas, contraseña (#79) y salida. */
+/** Menú de navegación por rol (#48): usuario, sucursal (#56), opciones permitidas, contraseña (#79) y salida, con confirmación (#87). */
 export function MenuUsuario() {
   const usuario = useUsuario();
   const [abierto, setAbierto] = useState(false);
@@ -19,6 +20,7 @@ export function MenuUsuario() {
   const id = useId();
   const navegar = useNavigate();
   const { pathname, search } = useLocation();
+  const { confirmar, dialogo } = useConfirmar();
 
   useEffect(() => {
     if (!abierto) return;
@@ -44,14 +46,30 @@ export function MenuUsuario() {
   const actual = pathname + search;
   const otrasSucursales = usuario.sucursales.filter((s) => s !== usuario.sucursal);
 
-  const salir = () => {
+  const salir = async () => {
+    setAbierto(false);
+    const enAtencion = usuario.rol === 'profesional' && usuario.profesional && tienePacienteEnAtencion(usuario.profesional);
+    const acepta = await confirmar({
+      titulo: '¿Cerrar sesión?',
+      mensaje: enAtencion
+        ? `Tiene un paciente en atención. Conviene finalizar la atención antes de salir. Se cerrará la sesión de ${usuario.nombre} en este equipo.`
+        : `Se cerrará la sesión de ${usuario.nombre} en este equipo.`,
+      aceptar: 'Cerrar sesión',
+    });
+    if (!acepta) return boton.current?.focus();
     cerrarSesion();
     navegar('/ingresar', { replace: true });
   };
 
-  const irASucursal = (s: string) => {
-    cambiarSucursal(s);
+  const irASucursal = async (s: string) => {
     setAbierto(false);
+    const acepta = await confirmar({
+      titulo: `¿Cambiar a ${nombreSucursal(s)}?`,
+      mensaje: 'Va a ver la cola, los consultorios y la sala de esa sucursal.',
+      aceptar: 'Cambiar de sucursal',
+    });
+    if (!acepta) return boton.current?.focus();
+    cambiarSucursal(s);
     // El consultorio y la cola cambian con la sucursal: se vuelve al menú principal.
     navegar('/inicio', { replace: true });
   };
@@ -180,6 +198,7 @@ export function MenuUsuario() {
           )}
         </Modal>
       )}
+      {dialogo}
     </div>
   );
 }

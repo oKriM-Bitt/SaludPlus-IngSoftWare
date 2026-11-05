@@ -6,6 +6,7 @@ import { profesionalPorId } from '../../servicios/configuracion';
 import { useUsuario } from '../../servicios/sesion';
 import { cambiar } from './cambios';
 import { Estado, useConfiguracion } from './comun';
+import { useConfirmar } from '../../componentes/Confirmar';
 
 type Tipo = 'consultorios' | 'boxes';
 
@@ -15,6 +16,7 @@ export function SeccionConsultorios() {
   const yo = useUsuario();
   const [sucursal, setSucursal] = useState(yo?.sucursal ?? config.sucursales[0]?.id ?? '');
   const [aviso, setAviso] = useState<string | null>(null);
+  const { confirmar, dialogo } = useConfirmar(); // #87
 
   const agregar = (tipo: Tipo, numero: string) => {
     const lista = config[tipo];
@@ -25,8 +27,18 @@ export function SeccionConsultorios() {
     return null;
   };
 
-  const alternar = (tipo: Tipo, id: string) => {
+  const alternar = async (tipo: Tipo, id: string) => {
     const x = config[tipo].find((y) => y.id === id)!;
+    if (x.activo) {
+      const nombre = `${tipo === 'boxes' ? 'el box' : 'el consultorio'} ${x.numero}`;
+      const acepta = await confirmar({
+        titulo: `¿Dar de baja ${nombre}?`,
+        mensaje: 'Deja de poder elegirse para atender. Se puede reactivar.',
+        aceptar: 'Dar de baja',
+        peligro: true,
+      });
+      if (!acepta) return;
+    }
     cambiar(`${x.activo ? 'Baja' : 'Reactivación'} de ${tipo === 'boxes' ? 'box' : 'consultorio'} ${x.numero} en ${sucursal}`, (c) => ({ ...c, [tipo]: c[tipo].map((y) => (y.id === id ? { ...y, activo: !y.activo } : y)) }));
     setAviso(`${tipo === 'boxes' ? 'Box' : 'Consultorio'} ${x.numero} ${x.activo ? 'dado de baja' : 'reactivado'}.`);
   };
@@ -81,6 +93,7 @@ export function SeccionConsultorios() {
           </div>
         ))}
       </div>
+      {dialogo}
     </section>
   );
 }

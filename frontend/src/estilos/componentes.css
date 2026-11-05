@@ -311,6 +311,48 @@
   font-size: 17px;
 }
 
+/* #91: estado de los datos en el encabezado (reemplaza "Conectado") */
+.estado-datos {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.estado-datos--sin-conexion {
+  padding: 4px 12px;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: var(--color-warning);
+  font-weight: 600;
+  white-space: normal;
+}
+
+/* #87: confirmación antes de una acción importante */
+.confirmar__acciones {
+  margin-top: var(--space-6, 24px);
+  flex-wrap: wrap;
+}
+
+.btn--primary.btn--peligro {
+  background: var(--color-error);
+}
+
+.btn--primary.btn--peligro:hover:not(:disabled) {
+  background: var(--color-error);
+  filter: brightness(0.9);
+}
+
+@media (max-width: 480px) {
+  .confirmar__acciones .btn {
+    flex: 1 1 100%;
+  }
+}
+
 /* Tiempo de espera (#46): la espera larga se indica con color y con texto */
 .espera {
   display: inline-flex;

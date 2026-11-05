@@ -4,4 +4,6 @@
 
 Para verla, descargue el archivo y ábralo con doble clic. Funciona sin internet y sin instalar nada.
 
-Las capturas se tomaron de la rama `main` con los datos de demostración (`?reset=1`). Si cambia una pantalla, hay que volver a sacarlas.
+También viene con el programa: la app la sirve en `/guia-de-uso.html` (copia en `frontend/public/guia-de-uso.html`) y se abre desde el menú de usuario, en **Guía de uso**. Si se actualiza la guía, hay que reemplazar los dos archivos.
+
+Las capturas se tomaron con el logo nuevo y los datos de demostración (`?reset=1`). Si cambia una pantalla, hay que volver a sacarlas.

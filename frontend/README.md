@@ -58,8 +58,8 @@ El proveedor de turnos está **simulado** en `src/servicios/turnos.ts`. Los hora
 | 27123456 | | Afiliada **sin turno** (Elena T.): para probar "No tengo turno" |
 | 31555666 | | Afiliado **sin turno** (Pablo Q.) |
 | 29777888 | 100200310 | **Dos turnos hoy** (Luis M., Cardiología y Clínica médica): elige a cuál llegó; registrar uno no marca el otro (#54) |
-| | 100200500 | **Afiliado del grupo familiar** compartido por Elsa F. (año 1958) y Tomás F. (año 2014): el tótem pide el año de nacimiento (#54) |
-| 26444333 | 100200320 | Turno dentro de 2 h 30: **muy temprano**, informa desde qué hora puede registrarse (#75) |
+| | 100200500 | **Afiliado del grupo familiar** compartido por Elsa F. (CUIL 27201119990) y Tomás F. (CUIL 20452221110): el tótem pide el CUIL (#54) |
+| 26444333 | 100200320 | Turno dentro de 2 h 30: **llegó con anticipación**, puede registrarse igual y esperar (#75) |
 | 24111333 | 100200330 | Turno en **Centro Güemes**: en Villa Norte avisa que es en otra sucursal (#56) |
 | 35222444 | 100200331 | Turno en Centro Güemes (Pediatría) |
 | cualquier otro | | Turno no encontrado / afiliado no encontrado |

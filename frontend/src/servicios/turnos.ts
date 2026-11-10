@@ -75,7 +75,7 @@ export type Turno = {
   horario: Date;
   consultorio: string;
   sucursal: string; // #56
-  anioNacimiento: string; // #54: dato extra para distinguir personas con el mismo número
+  cuil: string; // #54: dato extra (11 dígitos) para distinguir personas con el mismo número
 };
 
 export type EstadoAdmision =
@@ -240,24 +240,24 @@ const PRIMERA_SUCURSAL = 'villa-norte';
 const sucursalDe = (a: { sucursal?: string }) => a.sucursal ?? PRIMERA_SUCURSAL;
 
 /** Datos fijos de cada turno de la demo: el consultorio sale de la agenda del profesional (#60). */
-type TurnoBase = { id: string; documento: string; afiliado: string; paciente: string; profesional: string; sucursal: string; min: number; anio: string };
+type TurnoBase = { id: string; documento: string; afiliado: string; paciente: string; profesional: string; sucursal: string; min: number; cuil: string };
 
 const TURNOS_BASE: TurnoBase[] = [
-  { id: 't-1', documento: '30111222', afiliado: '100200300', paciente: 'Marta R.', profesional: 'p-ferrer', sucursal: 'villa-norte', min: 10, anio: '1983' },
-  { id: 't-2', documento: '28444555', afiliado: '100200301', paciente: 'Jorge P.', profesional: 'p-vidal', sucursal: 'villa-norte', min: -25, anio: '1980' },
-  { id: 't-3', documento: '25666777', afiliado: '100200302', paciente: 'Ana G.', profesional: 'p-rios', sucursal: 'villa-norte', min: 5, anio: '2019' },
-  { id: 't-4', documento: '33888999', afiliado: '100200303', paciente: 'Raúl D.', profesional: 'p-ferrer', sucursal: 'villa-norte', min: 20, anio: '1988' },
+  { id: 't-1', documento: '30111222', afiliado: '100200300', paciente: 'Marta R.', profesional: 'p-ferrer', sucursal: 'villa-norte', min: 10, cuil: '27301112225' },
+  { id: 't-2', documento: '28444555', afiliado: '100200301', paciente: 'Jorge P.', profesional: 'p-vidal', sucursal: 'villa-norte', min: -25, cuil: '20284445555' },
+  { id: 't-3', documento: '25666777', afiliado: '100200302', paciente: 'Ana G.', profesional: 'p-rios', sucursal: 'villa-norte', min: 5, cuil: '27256667776' },
+  { id: 't-4', documento: '33888999', afiliado: '100200303', paciente: 'Raúl D.', profesional: 'p-ferrer', sucursal: 'villa-norte', min: 20, cuil: '20338889993' },
   // #54: la misma persona con dos turnos hoy.
-  { id: 't-5', documento: '29777888', afiliado: '100200310', paciente: 'Luis M.', profesional: 'p-vidal', sucursal: 'villa-norte', min: 15, anio: '1982' },
-  { id: 't-6', documento: '29777888', afiliado: '100200310', paciente: 'Luis M.', profesional: 'p-luna', sucursal: 'villa-norte', min: 45, anio: '1982' },
+  { id: 't-5', documento: '29777888', afiliado: '100200310', paciente: 'Luis M.', profesional: 'p-vidal', sucursal: 'villa-norte', min: 15, cuil: '23297778889' },
+  { id: 't-6', documento: '29777888', afiliado: '100200310', paciente: 'Luis M.', profesional: 'p-luna', sucursal: 'villa-norte', min: 45, cuil: '23297778889' },
   // #54: el mismo número de afiliado del grupo familiar para dos personas.
-  { id: 't-7', documento: '20111999', afiliado: '100200500', paciente: 'Elsa F.', profesional: 'p-luna', sucursal: 'villa-norte', min: 25, anio: '1958' },
-  { id: 't-8', documento: '45222111', afiliado: '100200500', paciente: 'Tomás F.', profesional: 'p-rios', sucursal: 'villa-norte', min: 30, anio: '2014' },
+  { id: 't-7', documento: '20111999', afiliado: '100200500', paciente: 'Elsa F.', profesional: 'p-luna', sucursal: 'villa-norte', min: 25, cuil: '27201119990' },
+  { id: 't-8', documento: '45222111', afiliado: '100200500', paciente: 'Tomás F.', profesional: 'p-rios', sucursal: 'villa-norte', min: 30, cuil: '20452221110' },
   // #75: llega demasiado temprano.
-  { id: 't-9', documento: '26444333', afiliado: '100200320', paciente: 'Sergio V.', profesional: 'p-vidal', sucursal: 'villa-norte', min: 150, anio: '1979' },
+  { id: 't-9', documento: '26444333', afiliado: '100200320', paciente: 'Sergio V.', profesional: 'p-vidal', sucursal: 'villa-norte', min: 150, cuil: '20264443335' },
   // #56: turnos de otra sucursal.
-  { id: 't-10', documento: '24111333', afiliado: '100200330', paciente: 'Nora P.', profesional: 'p-aguirre', sucursal: 'guemes', min: 10, anio: '1975' },
-  { id: 't-11', documento: '35222444', afiliado: '100200331', paciente: 'Iván R.', profesional: 'p-sosa', sucursal: 'guemes', min: 5, anio: '2018' },
+  { id: 't-10', documento: '24111333', afiliado: '100200330', paciente: 'Nora P.', profesional: 'p-aguirre', sucursal: 'guemes', min: 10, cuil: '27241113332' },
+  { id: 't-11', documento: '35222444', afiliado: '100200331', paciente: 'Iván R.', profesional: 'p-sosa', sucursal: 'guemes', min: 5, cuil: '20352224449' },
 ];
 
 /** Turnos que informa el proveedor para hoy, de todas las sucursales. DNIs de demostración: ver README. */
@@ -276,7 +276,7 @@ function turnosDelDia(): Turno[] {
       horario: minutosDesdeAhora(b.min),
       consultorio: p.consultorio,
       sucursal: b.sucursal,
-      anioNacimiento: b.anio,
+      cuil: b.cuil,
     });
   }
   return turnos;
@@ -471,11 +471,11 @@ function resultadoDeTurno(turno: Turno, ahora: Date): ResultadoBusqueda {
 /**
  * Busca el turno del día. Si se indica el servicio elegido en el tótem (#43), también
  * controla que el turno sea de ese servicio antes de aplicar la tolerancia.
- * #54: si el número coincide con más de una persona pide el año de nacimiento; si la
+ * #54: si el número coincide con más de una persona pide el CUIL; si la
  * persona tiene varios turnos pendientes, devuelve la lista para que elija.
  * #56: si el turno es de otra sucursal, lo informa y no registra nada.
  */
-export async function buscarTurno(identificador: string, ahora = new Date(), servicio?: string, anioNacimiento?: string): Promise<ResultadoBusqueda> {
+export async function buscarTurno(identificador: string, ahora = new Date(), servicio?: string, cuil?: string): Promise<ResultadoBusqueda> {
   verificarConexion();
   await esperar(600);
   let coincidencias = turnosDelDia().filter((t) => t.documento === identificador || t.afiliado === identificador);
@@ -483,8 +483,8 @@ export async function buscarTurno(identificador: string, ahora = new Date(), ser
 
   const personas = [...new Map(coincidencias.map((t) => [t.documento, { paciente: t.paciente, documento: t.documento }])).values()];
   if (personas.length > 1) {
-    if (!anioNacimiento) return { tipo: 'varias-personas', personas };
-    coincidencias = coincidencias.filter((t) => t.anioNacimiento === anioNacimiento);
+    if (!cuil) return { tipo: 'varias-personas', personas };
+    coincidencias = coincidencias.filter((t) => t.cuil === cuil);
     if (coincidencias.length === 0) return { tipo: 'no-encontrado' };
   }
 
@@ -913,10 +913,10 @@ export async function obtenerSala(ahora = new Date()): Promise<DatosSala> {
       consultorio: p.consultorio,
       texto:
         e?.estado === 'ausente'
-          ? `Consultorio ${p.consultorio} (${p.especialidad}): hoy no atiende. Los pacientes serán reasignados; consulte en secretaría.`
+          ? `${p.nombre} (${p.especialidad}) · Consultorio ${p.consultorio}: hoy no atiende. Los pacientes serán reasignados; consulte en secretaría.`
           : pausa
-            ? textoPausaSala(p.consultorio, minutosRestantesPausa(pausa, ahora))
-            : `Consultorio ${p.consultorio} (${p.especialidad}): demora estimada de ${e?.minutos ?? 0} minutos.`,
+            ? textoPausaSala(p.consultorio, minutosRestantesPausa(pausa, ahora), p.nombre)
+            : `${p.nombre} (${p.especialidad}) · Consultorio ${p.consultorio}: demora estimada de ${e?.minutos ?? 0} minutos.`,
     };
   });
   const generales = avisosVigentes(sucursalActiva(), ahora).map((a) => ({ id: a.id, texto: a.texto }));
@@ -1122,10 +1122,10 @@ export function minutosRestantesPausa(p: Pausa, ahora = new Date()): number {
   return Math.max(0, Math.ceil((new Date(p.hasta).getTime() - ahora.getTime()) / 60_000));
 }
 
-export function textoPausaSala(consultorio: string, minutos: number): string {
-  return minutos > 0
-    ? `Consultorio ${consultorio}: pausa breve. La atención se reanuda en unos ${minutos} minutos.`
-    : `Consultorio ${consultorio}: pausa breve. La atención se reanuda en breve.`;
+/** El aviso nombra al profesional: puede elegir otro consultorio cada día (DEV-60). */
+export function textoPausaSala(consultorio: string, minutos: number, profesional?: string): string {
+  const quien = profesional ? `${profesional} · Consultorio ${consultorio}` : `Consultorio ${consultorio}`;
+  return minutos > 0 ? `${quien}: pausa breve. La atención se reanuda en unos ${minutos} minutos.` : `${quien}: pausa breve. La atención se reanuda en breve.`;
 }
 
 function verificarSinPausa(consultorio: string) {

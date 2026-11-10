@@ -44,7 +44,8 @@ export type IconName =
   | 'flag'
   | 'printer'
   | 'search'
-  | 'inbox';
+  | 'inbox'
+  | 'delete';
 
 const paths: Record<IconName, JSX.Element> = {
   chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
@@ -52,6 +53,7 @@ const paths: Record<IconName, JSX.Element> = {
   download: <path d="M12 3v12M7 10l5 5 5-5M4 21h16" />,
   key: <path d="M15 7a4 4 0 1 1-3.9 4.9L3 20v-3h3v-3h3l2.1-2.1A4 4 0 0 1 15 7zM16 10h.01" />,
   more: <path d="M12 6h.01M12 12h.01M12 18h.01" />,
+  delete: <path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zM17.5 9.5l-5 5M12.5 9.5l5 5" />,
   undo: <path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" />,
   pause: <path d="M8 5v14M16 5v14" />,
   play: <path d="M7 4l13 8-13 8z" />,

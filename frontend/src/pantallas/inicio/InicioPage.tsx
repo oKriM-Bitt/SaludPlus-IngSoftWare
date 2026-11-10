@@ -13,6 +13,8 @@ export function InicioPage() {
   const usuario = useUsuario()!;
   const [params] = useSearchParams();
   const destinos = destinosPorRol(usuario, profesionalesDelDia(usuario.sucursal));
+  // Profesional: una sola opción, centrada y grande para que la pantalla no quede vacía.
+  const unica = destinos.length === 1;
 
   return (
     <div className="inicio">
@@ -20,7 +22,7 @@ export function InicioPage() {
         <Logo size={40} />
         <MenuUsuario />
       </header>
-      <main className="inicio__main">
+      <main className={`inicio__main ${unica ? 'inicio__main--unica' : ''}`}>
         <div className="inicio__titulo">
           <h1>Hola, {usuario.nombre}</h1>
           <p>
@@ -32,18 +34,24 @@ export function InicioPage() {
             Se muestran solo las opciones de su rol.
           </Alerta>
         )}
-        <ul className="inicio__grilla">
+        <ul className={`inicio__grilla ${unica ? 'inicio__grilla--unica' : ''}`}>
           {destinos.map((d) => {
             const contenido = (
               <>
                 <span className="inicio__icono">
-                  <Icon name={d.icono} size={32} />
+                  <Icon name={d.icono} size={unica ? 56 : 32} />
                 </span>
                 <span className="inicio__texto">
                   <strong>{d.titulo}</strong>
                   <span>{d.descripcion}</span>
                 </span>
-                <Icon name={d.nuevaPestana ? 'external' : 'arrow-right'} size={24} className="inicio__flecha" />
+                {unica ? (
+                  <span className="inicio__entrar">
+                    Entrar <Icon name="arrow-right" size={24} />
+                  </span>
+                ) : (
+                  <Icon name={d.nuevaPestana ? 'external' : 'arrow-right'} size={24} className="inicio__flecha" />
+                )}
               </>
             );
             return (

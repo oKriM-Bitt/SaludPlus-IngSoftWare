@@ -39,7 +39,7 @@ export function SeccionSucursales() {
         </Button>
       </div>
       {aviso && <Alerta tono="info" titulo={aviso} />}
-      {editando && <FormularioSucursal sucursal={editando === 'nueva' ? undefined : editando} onListo={(t) => { setEditando(null); if (t) setAviso(t); }} />}
+      {editando && <FormularioSucursal key={editando === 'nueva' ? 'nueva' : editando.id} sucursal={editando === 'nueva' ? undefined : editando} onListo={(t) => { setEditando(null); if (t) setAviso(t); }} />}
 
       <ul className="admin__lista">
         {config.sucursales.map((s) => (

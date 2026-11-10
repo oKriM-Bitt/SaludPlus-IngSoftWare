@@ -283,8 +283,8 @@ export function SecretariaPage() {
       setResultado({
         tono: 'info',
         titulo: `${r.turno.paciente} llegó muy temprano`,
-        texto: `Su turno es a las ${hora(r.turno.horario)}. El tótem acepta el registro desde las ${hora(r.desde)}.`,
-        opciones: [{ etiqueta: 'Registrar igual', accion: () => registrarTurno(r.turno) }],
+        texto: `Su turno es a las ${hora(r.turno.horario)}. Puede registrar la llegada y que espere en la sala.`,
+        opciones: [{ etiqueta: 'Registrar llegada', accion: () => registrarTurno(r.turno) }],
       });
     } else if (r.tipo === 'dia-cerrado') {
       setResultado({ tono: 'warning', titulo: 'El día ya está cerrado', texto: 'No se pueden registrar llegadas después del cierre.' });
@@ -643,10 +643,10 @@ export function SecretariaPage() {
           <section className="sec__box" aria-labelledby="sec-box-titulo">
             <div className="sec__box-encabezado">
               <h2 id="sec-box-titulo">
-                <Icon name="inbox" size={22} /> {miBox ? `Box ${miBox}` : 'Box de admisión'}
+                <Icon name="inbox" size={22} /> {miBox ? `Atiendo en: Box ${miBox}` : 'Box de admisión'}
               </h2>
               <div className="campo sec__box-elegir">
-                <label htmlFor="sec-box">Atiendo en</label>
+                <label htmlFor="sec-box">{miBox ? 'Cambiar de box' : 'Elegir box'}</label>
                 <select
                   id="sec-box"
                   className="select"

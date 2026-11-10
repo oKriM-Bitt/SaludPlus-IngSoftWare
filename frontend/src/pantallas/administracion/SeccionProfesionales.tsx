@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
@@ -38,7 +38,7 @@ export function SeccionProfesionales() {
         </Button>
       </div>
       {aviso && <Alerta tono="info" titulo={aviso} />}
-      {editando && <FormularioProfesional profesional={editando === 'nuevo' ? undefined : editando} onListo={(t) => { setEditando(null); if (t) setAviso(t); }} />}
+      {editando && <FormularioProfesional key={editando === 'nuevo' ? 'nuevo' : editando.id} profesional={editando === 'nuevo' ? undefined : editando} onListo={(t) => { setEditando(null); if (t) setAviso(t); }} />}
 
       <ul className="admin__lista">
         {config.profesionales.map((p) => {
@@ -73,35 +73,75 @@ export function SeccionProfesionales() {
   );
 }
 
+const TODA_LA_SEMANA_LABORAL = [1, 2, 3, 4, 5];
+
+/** Dos franjas se pisan si comparten algún día y se superponen en horario. */
+const sePisan = (a: Pick<Asignacion, 'dias' | 'desde' | 'hasta'>, b: Pick<Asignacion, 'dias' | 'desde' | 'hasta'>) =>
+  a.dias.some((d) => b.dias.includes(d)) && a.desde < b.hasta && b.desde < a.hasta;
+
 function Agenda({ profesional, asignaciones, onAviso }: { profesional: ProfesionalRegistrado; asignaciones: Asignacion[]; onAviso: (t: string) => void }) {
   const { confirmar, dialogo } = useConfirmar(); // #87
   const config = useConfiguracion();
-  const consultorios = config.consultorios.filter((c) => c.activo);
-  const [consultorio, setConsultorio] = useState(consultorios[0]?.id ?? '');
-  const [dias, setDias] = useState<number[]>([1, 2, 3, 4, 5]);
+  const consultorios = config.consultorios.filter((c) => c.activo && config.sucursales.find((s) => s.id === c.sucursal)?.activa !== false);
+  const [editando, setEditando] = useState<Asignacion | null>(null);
+  const [dias, setDias] = useState<number[]>(TODA_LA_SEMANA_LABORAL);
   const [desde, setDesde] = useState('08:00');
   const [hasta, setHasta] = useState('14:00');
   const [error, setError] = useState<string | null>(null);
+
+  const franja = { dias, desde, hasta };
+  /** Asignación de OTRO profesional que ocupa ese consultorio en la franja elegida. */
+  const ocupacion = (consultorioId: string) =>
+    config.asignaciones.find((a) => a.consultorio === consultorioId && a.profesional !== profesional.id && a.id !== editando?.id && sePisan(a, franja));
+  const primeroLibre = () => consultorios.find((c) => !ocupacion(c.id))?.id ?? consultorios[0]?.id ?? '';
+  const [consultorio, setConsultorio] = useState(primeroLibre);
 
   const describir = (a: Asignacion) => {
     const c = consultorioPorId(a.consultorio);
     return `${c ? `${nombreSucursal(c.sucursal)} · Consultorio ${c.numero}` : 'Consultorio de baja'} · ${a.dias.length === 7 ? 'Todos los días' : a.dias.map((d) => DIAS[d]).join(', ')} · ${a.desde} a ${a.hasta}`;
   };
+  const nombreDe = (id: string) => config.profesionales.find((p) => p.id === id)?.nombre ?? 'otro profesional';
 
-  const agregar = (e: FormEvent) => {
+  const limpiar = () => {
+    setEditando(null);
+    setDias(TODA_LA_SEMANA_LABORAL);
+    setDesde('08:00');
+    setHasta('14:00');
+    setError(null);
+  };
+
+  const editar = (a: Asignacion) => {
+    setEditando(a);
+    setConsultorio(a.consultorio);
+    setDias(a.dias);
+    setDesde(a.desde);
+    setHasta(a.hasta);
+    setError(null);
+  };
+
+  const guardar = (e: FormEvent) => {
     e.preventDefault();
     if (!consultorio) return setError('Elija un consultorio.');
     if (dias.length === 0) return setError('Elija al menos un día.');
-    if (desde >= hasta) return setError('La hora de fin debe ser posterior a la de inicio.');
+    if (!desde || !hasta || desde >= hasta) return setError('La hora de fin debe ser posterior a la de inicio.');
     // Un consultorio no puede tener a dos profesionales a la misma hora del mismo día.
-    const choque = config.asignaciones.find(
-      (a) => a.consultorio === consultorio && a.profesional !== profesional.id && a.dias.some((d) => dias.includes(d)) && a.desde < hasta && desde < a.hasta,
-    );
-    if (choque) return setError(`Ese consultorio ya está ocupado en ese horario: ${describir(choque)}.`);
-    const nueva: Asignacion = { id: `a-${profesional.id}-${Date.now()}`, profesional: profesional.id, consultorio, dias: [...dias].sort(), desde, hasta };
-    cambiar(`Agenda de ${profesional.nombre}: ${describir(nueva)}`, (c) => ({ ...c, asignaciones: [...c.asignaciones, nueva] }));
-    setError(null);
-    onAviso(`Se agregó a la agenda de ${profesional.nombre}: ${describir(nueva)}.`);
+    const choque = ocupacion(consultorio);
+    if (choque) return setError(`Ese consultorio ya está ocupado por ${nombreDe(choque.profesional)}: ${describir(choque)}. Elija otro consultorio u otro horario.`);
+    // El profesional no puede estar en dos lugares a la vez.
+    const propia = asignaciones.find((a) => a.id !== editando?.id && sePisan(a, franja));
+    if (propia) return setError(`${profesional.nombre} ya atiende en ese horario: ${describir(propia)}. Edite o quite ese horario primero.`);
+
+    const datos = { consultorio, dias: [...dias].sort((x, y) => x - y), desde, hasta };
+    if (editando) {
+      const nueva: Asignacion = { ...editando, ...datos };
+      cambiar(`Agenda de ${profesional.nombre}: ${describir(editando)} → ${describir(nueva)}`, (c) => ({ ...c, asignaciones: c.asignaciones.map((x) => (x.id === editando.id ? nueva : x)) }));
+      onAviso(`Se modificó la agenda de ${profesional.nombre}: ${describir(nueva)}.`);
+    } else {
+      const nueva: Asignacion = { id: `a-${profesional.id}-${Date.now()}`, profesional: profesional.id, ...datos };
+      cambiar(`Agenda de ${profesional.nombre}: ${describir(nueva)}`, (c) => ({ ...c, asignaciones: [...c.asignaciones, nueva] }));
+      onAviso(`Se agregó a la agenda de ${profesional.nombre}: ${describir(nueva)}.`);
+    }
+    limpiar();
   };
 
   const quitar = async (a: Asignacion) => {
@@ -113,6 +153,7 @@ function Agenda({ profesional, asignaciones, onAviso }: { profesional: Profesion
     });
     if (!acepta) return;
     cambiar(`Agenda de ${profesional.nombre}: se quitó ${describir(a)}`, (c) => ({ ...c, asignaciones: c.asignaciones.filter((x) => x.id !== a.id) }));
+    if (editando?.id === a.id) limpiar();
     onAviso(`Se quitó de la agenda de ${profesional.nombre}: ${describir(a)}.`);
   };
 
@@ -123,42 +164,59 @@ function Agenda({ profesional, asignaciones, onAviso }: { profesional: Profesion
       ) : (
         <ul>
           {asignaciones.map((a) => (
-            <li key={a.id}>
+            <li key={a.id} className={editando?.id === a.id ? 'admin__agenda-editando' : undefined}>
               <span>{describir(a)}</span>
-              <button type="button" className="link-boton link-boton--peligro" onClick={() => quitar(a)}>
-                Quitar
-              </button>
+              <span className="admin__acciones">
+                <button type="button" className="link-boton" onClick={() => (editando?.id === a.id ? limpiar() : editar(a))}>
+                  {editando?.id === a.id ? 'Cancelar edición' : 'Editar'}
+                </button>
+                <button type="button" className="link-boton link-boton--peligro" onClick={() => quitar(a)}>
+                  Quitar
+                </button>
+              </span>
             </li>
           ))}
         </ul>
       )}
-      <form className="admin__form" onSubmit={agregar} noValidate>
-        <h3>Agregar a la agenda</h3>
+      <form className="admin__form" onSubmit={guardar} noValidate>
+        <h3>{editando ? 'Modificar horario' : 'Agregar a la agenda'}</h3>
         <div className="admin__campos">
           <div className="campo">
             <label htmlFor={`ag-cons-${profesional.id}`}>Consultorio</label>
-            <select id={`ag-cons-${profesional.id}`} className="select" value={consultorio} onChange={(e) => setConsultorio(e.target.value)}>
-              {consultorios.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {nombreSucursal(c.sucursal)} · Consultorio {c.numero}
-                </option>
-              ))}
+            <select id={`ag-cons-${profesional.id}`} className="select" value={consultorio} onChange={(e) => { setConsultorio(e.target.value); setError(null); }}>
+              {consultorios.map((c) => {
+                const ocupado = ocupacion(c.id);
+                return (
+                  <option key={c.id} value={c.id}>
+                    {nombreSucursal(c.sucursal)} · Consultorio {c.numero}
+                    {ocupado ? ` · Ocupado (${nombreDe(ocupado.profesional)})` : ' · Libre'}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="campo">
             <label htmlFor={`ag-desde-${profesional.id}`}>Desde</label>
-            <input id={`ag-desde-${profesional.id}`} type="time" className="input" value={desde} onChange={(e) => setDesde(e.target.value)} />
+            <input id={`ag-desde-${profesional.id}`} type="time" className="input" value={desde} onChange={(e) => { setDesde(e.target.value); setError(null); }} />
           </div>
           <div className="campo">
             <label htmlFor={`ag-hasta-${profesional.id}`}>Hasta</label>
-            <input id={`ag-hasta-${profesional.id}`} type="time" className="input" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+            <input id={`ag-hasta-${profesional.id}`} type="time" className="input" value={hasta} onChange={(e) => { setHasta(e.target.value); setError(null); }} />
           </div>
         </div>
         <fieldset className="admin__checks admin__checks--fila">
           <legend>Días</legend>
           {DIAS.map((d, i) => (
             <label key={d} className="modal__opcion">
-              <input type="checkbox" checked={dias.includes(i)} onChange={(e) => setDias((xs) => (e.target.checked ? [...xs, i] : xs.filter((x) => x !== i)))} /> {d}
+              <input
+                type="checkbox"
+                checked={dias.includes(i)}
+                onChange={(e) => {
+                  setError(null);
+                  setDias((xs) => (e.target.checked ? [...xs, i] : xs.filter((x) => x !== i)));
+                }}
+              />{' '}
+              {d}
             </label>
           ))}
         </fieldset>
@@ -168,8 +226,13 @@ function Agenda({ profesional, asignaciones, onAviso }: { profesional: Profesion
           </p>
         )}
         <div className="admin__botones">
-          <Button type="submit" variant="secondary" className="btn--compacto" icon={<Icon name="calendar-check" size={20} />}>
-            Agregar a la agenda
+          {editando && (
+            <Button variant="secondary" className="btn--compacto" onClick={limpiar}>
+              Cancelar
+            </Button>
+          )}
+          <Button type="submit" variant={editando ? 'primary' : 'secondary'} className="btn--compacto" icon={<Icon name="calendar-check" size={20} />}>
+            {editando ? 'Guardar cambios' : 'Agregar a la agenda'}
           </Button>
         </div>
       </form>
@@ -184,6 +247,12 @@ function FormularioProfesional({ profesional, onListo }: { profesional?: Profesi
   const [especialidad, setEspecialidad] = useState(profesional?.especialidad ?? '');
   const [error, setError] = useState<string | null>(null);
   const especialidades = [...new Set(config.profesionales.map((p) => p.especialidad))].sort();
+  const formRef = useRef<HTMLFormElement>(null);
+  // Se lleva el formulario a la vista: puede abrirse desde un profesional del final de la lista.
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    formRef.current?.querySelector<HTMLInputElement>('#pr-nombre')?.focus({ preventScroll: true });
+  }, []);
 
   const guardar = (e: FormEvent) => {
     e.preventDefault();
@@ -201,7 +270,7 @@ function FormularioProfesional({ profesional, onListo }: { profesional?: Profesi
   };
 
   return (
-    <form className="admin__form" onSubmit={guardar} noValidate>
+    <form ref={formRef} className="admin__form" onSubmit={guardar} noValidate>
       <h3>{profesional ? `Editar ${profesional.nombre}` : 'Nuevo profesional'}</h3>
       <div className="admin__campos">
         <div className="campo">

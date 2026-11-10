@@ -144,6 +144,7 @@
 
 .admin__item--columna {
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: stretch;
 }
 
@@ -321,4 +322,21 @@
     flex-shrink: 0;
     white-space: nowrap;
   }
+}
+
+/* Edición de un usuario: la fila se resalta y el formulario se abre debajo */
+.admin__fila--editando td {
+  background: #eaf3fb;
+}
+
+.admin__fila-form > td {
+  padding: var(--space-3);
+  background: #eaf3fb;
+}
+
+/* Agenda: el horario que se está editando */
+.admin__agenda li.admin__agenda-editando {
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  background: #eaf3fb;
 }

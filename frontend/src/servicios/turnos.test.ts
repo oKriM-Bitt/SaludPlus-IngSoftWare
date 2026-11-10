@@ -171,7 +171,7 @@ describe('pausa del consultorio (DEV-58)', () => {
     await ya(T.pausarConsultorio('4', 10));
     await expect(ya(T.llamarSiguiente('4'))).rejects.toBeInstanceOf(T.ConsultorioEnPausaError);
     const sala = await ya(T.obtenerSala());
-    expect(sala.avisos.some((a) => a.texto.startsWith('Consultorio 4: pausa breve'))).toBe(true);
+    expect(sala.avisos.some((a) => a.texto.includes('Consultorio 4: pausa breve'))).toBe(true);
     expect(sala.esperas.find((e) => e.especialidad.includes('consultorio 4'))!.minutos).toBe(antes + 10);
     expect(T.pausasDeHoy()[FERRER]).toMatchObject({ minutos: 10, consultorio: '4' });
   });
@@ -297,5 +297,24 @@ describe('avisos generales en la sala (DEV-55)', () => {
     const { publicarAviso, vencimiento } = await import('./avisos');
     publicarAviso({ sucursal: 'villa-norte', texto: 'Hay demoras en la atención.', hasta: vencimiento(30), usuario: 'jbenitez' });
     expect((await ya(T.obtenerSala())).generales.map((g) => g.texto)).toEqual(['Hay demoras en la atención.']);
+  });
+});
+
+describe('mismo número para dos personas: se pide el CUIL (#54)', () => {
+  it('sin CUIL pide confirmar quién es; con el CUIL encuentra el turno de esa persona', async () => {
+    const r = await ya(T.buscarTurno('100200500'));
+    expect(r.tipo).toBe('varias-personas');
+    const elsa = await ya(T.buscarTurno('100200500', new Date(), undefined, '27201119990'));
+    expect(elsa.tipo === 'encontrado' && elsa.turno.paciente).toBe('Elsa F.');
+    const otro = await ya(T.buscarTurno('100200500', new Date(), undefined, '20111111112'));
+    expect(otro.tipo).toBe('no-encontrado');
+  });
+});
+
+describe('avisos de profesionales en la sala', () => {
+  it('nombran al profesional, porque puede atender en otro consultorio cada día', async () => {
+    await ya(T.marcarEstadoProfesional(VIDAL, 'demorado', 20));
+    const sala = await ya(T.obtenerSala());
+    expect(sala.avisos.some((a) => a.texto.startsWith(`${VIDAL} (Cardiología) · Consultorio 2: demora estimada de 20 minutos`))).toBe(true);
   });
 });

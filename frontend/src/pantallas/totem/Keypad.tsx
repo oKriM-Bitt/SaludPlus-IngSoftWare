@@ -1,3 +1,5 @@
+import { Icon } from '../../componentes/Icon';
+
 type KeypadProps = {
   onDigit: (d: string) => void;
   onClear: () => void;
@@ -14,14 +16,14 @@ export function Keypad({ onDigit, onClear, onBackspace }: KeypadProps) {
           {d}
         </button>
       ))}
-      <button type="button" className="keypad__key keypad__key--text" onClick={onClear} aria-label="Borrar todo">
-        Borrar
+      <button type="button" className="keypad__key keypad__key--text" onClick={onClear}>
+        Borrar todo
       </button>
       <button type="button" className="keypad__key" onClick={() => onDigit('0')}>
         0
       </button>
-      <button type="button" className="keypad__key keypad__key--text" onClick={onBackspace} aria-label="Corregir último número">
-        Corregir
+      <button type="button" className="keypad__key keypad__key--icono" onClick={onBackspace} aria-label="Borrar el último número" title="Borrar el último número">
+        <Icon name="delete" size={44} />
       </button>
     </div>
   );

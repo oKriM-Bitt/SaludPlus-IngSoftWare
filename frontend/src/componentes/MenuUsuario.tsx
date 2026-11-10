@@ -163,7 +163,7 @@ export function MenuUsuario() {
               <Icon name="key" size={22} /> Cambiar contraseña
             </Link>
             {/* Guía de uso interactiva: el mismo archivo que docs/guia, servido por la app */}
-            <a className="menu__item" href={`${import.meta.env.BASE_URL}guia-de-uso.html`} target="_blank" rel="noreferrer" onClick={() => setAbierto(false)}>
+            <a className="menu__item" href={`${import.meta.env.BASE_URL}guia-de-uso.html?rol=${usuario.rol}`} target="_blank" rel="noreferrer" onClick={() => setAbierto(false)}>
               <Icon name="help-circle" size={22} /> Guía de uso
               <Icon name="external" size={18} className="menu__externo" />
               <span className="visually-hidden">(se abre en otra pestaña)</span>

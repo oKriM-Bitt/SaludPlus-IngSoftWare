@@ -255,6 +255,11 @@
   font-size: clamp(16px, 2.59vw, 28px);
 }
 
+.keypad__key--icono {
+  display: grid;
+  place-items: center;
+}
+
 .totem__actions {
   margin-top: clamp(16px, 3vw, 32px);
   display: flex;

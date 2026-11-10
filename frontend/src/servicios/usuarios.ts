@@ -103,7 +103,8 @@ export function destinosPorRol(u: Usuario, profesionales: { nombre: string; cons
   });
 
   if (u.rol === 'secretaria') return [admision, cierre, totem, sala];
-  if (u.rol === 'profesional') return [{ ...consultorio(u.consultorio ?? '—', 'Su consultorio'), titulo: 'Mi consultorio' }];
+  if (u.rol === 'profesional')
+    return [{ ...consultorio(u.consultorio ?? '—', ''), titulo: 'Mi consultorio', descripcion: `Consultorio ${u.consultorio ?? '—'} · ${u.centro}. Vea sus pacientes en espera y llámelos.` }];
   return [
     admision,
     ...profesionales.map((p) => consultorio(p.consultorio, p.nombre)),

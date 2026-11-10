@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon } from '../../componentes/Icon';
 import { Button } from '../../componentes/Button';
 import { Alerta } from '../../componentes/Alerta';
@@ -55,6 +55,12 @@ export function SeccionUsuarios() {
     setAviso({ titulo: u.activo ? `${u.nombre} quedó de baja` : `${u.nombre} se reactivó`, texto: u.activo ? 'Ya no puede ingresar. Sus registros anteriores se conservan.' : 'Puede volver a ingresar con su contraseña.' });
   };
 
+  const terminar = (t?: { titulo: string; texto: string; clave?: string }) => {
+    setEdicion(null);
+    if (t) setAviso(t);
+  };
+  const editando = edicion?.modo === 'editar' ? edicion.usuario.usuario : null;
+
   return (
     <section className="tarjeta">
       <div className="admin__encabezado">
@@ -75,7 +81,7 @@ export function SeccionUsuarios() {
         </Alerta>
       )}
 
-      {edicion && <FormularioUsuario edicion={edicion} onListo={(t) => { setEdicion(null); if (t) setAviso(t); }} />}
+      {edicion?.modo === 'nuevo' && <FormularioUsuario key="nuevo" edicion={edicion} onListo={terminar} />}
 
       <div className="tabla-caja">
         <table className="tabla">
@@ -94,7 +100,8 @@ export function SeccionUsuarios() {
               const bloqueo = minutosDeBloqueo(u.bloqueadoHasta);
               const soyYo = yo?.usuario === u.usuario;
               return (
-                <tr key={u.usuario}>
+                <Fragment key={u.usuario}>
+                <tr className={editando === u.usuario ? 'admin__fila--editando' : undefined}>
                   <td>
                     <code>{u.usuario}</code>
                   </td>
@@ -116,8 +123,16 @@ export function SeccionUsuarios() {
                   </td>
                   <td>
                     <span className="admin__acciones">
-                      <button type="button" className="link-boton" onClick={() => setEdicion({ modo: 'editar', usuario: u })}>
-                        Editar
+                      <button
+                        type="button"
+                        className="link-boton"
+                        aria-expanded={editando === u.usuario}
+                        onClick={() => {
+                          setAviso(null);
+                          setEdicion(editando === u.usuario ? null : { modo: 'editar', usuario: u });
+                        }}
+                      >
+                        {editando === u.usuario ? 'Cerrar edición' : 'Editar'}
                       </button>
                       <button type="button" className="link-boton" onClick={() => restablecer(u)}>
                         Restablecer contraseña
@@ -135,6 +150,15 @@ export function SeccionUsuarios() {
                     </span>
                   </td>
                 </tr>
+                {/* El formulario se abre debajo del usuario que se edita */}
+                {editando === u.usuario && edicion?.modo === 'editar' && (
+                  <tr className="admin__fila-form">
+                    <td colSpan={6}>
+                      <FormularioUsuario key={u.usuario} edicion={edicion} onListo={terminar} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -154,6 +178,13 @@ function FormularioUsuario({ edicion, onListo }: { edicion: NonNullable<Edicion>
   const [sucursales, setSucursales] = useState<string[]>(base?.sucursales ?? [config.sucursales[0]?.id].filter(Boolean));
   const [profesional, setProfesional] = useState(base?.profesional ?? config.profesionales.find((p) => p.activo)?.id ?? '');
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Al abrir el formulario se lleva a la vista y se pone el foco en el primer campo editable.
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    formRef.current?.querySelector<HTMLInputElement>(base ? '#us-nombre' : '#us-usuario')?.focus({ preventScroll: true });
+  }, [base]);
 
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
@@ -163,6 +194,8 @@ function FormularioUsuario({ edicion, onListo }: { edicion: NonNullable<Edicion>
     if (nombre.trim().length < 3) return setError('Escriba el nombre y apellido.');
     if (sucursales.length === 0) return setError('Elija al menos una sucursal.');
     if (rol === 'profesional' && !profesional) return setError('Elija a qué profesional corresponde el usuario.');
+    if (rol === 'profesional' && config.usuarios.some((u) => u.profesional === profesional && u.rol === 'profesional' && u.usuario !== base?.usuario && u.activo))
+      return setError('Ese profesional ya tiene otro usuario activo.');
     const datos = { nombre: nombre.trim(), rol, sucursales, profesional: rol === 'profesional' ? profesional : undefined };
     if (base) {
       cambiar(`Usuario modificado: ${base.usuario}`, (c) => ({ ...c, usuarios: c.usuarios.map((u) => (u.usuario === base.usuario ? { ...u, ...datos } : u)) }));
@@ -176,7 +209,7 @@ function FormularioUsuario({ edicion, onListo }: { edicion: NonNullable<Edicion>
   };
 
   return (
-    <form className="admin__form" onSubmit={guardar} noValidate>
+    <form ref={formRef} className="admin__form" onSubmit={guardar} noValidate>
       <h3>{base ? `Editar ${base.usuario}` : 'Nuevo usuario'}</h3>
       <div className="admin__campos">
         <div className="campo">

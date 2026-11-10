@@ -27,6 +27,8 @@ import './totem.css';
 
 const MAX_DIGITOS = 11;
 const MIN_DIGITOS = 7;
+const CUIL_DIGITOS = 11;
+/** Si nadie toca la pantalla durante 45 segundos, el tótem vuelve solo al inicio. */
 const INACTIVIDAD_MS = 45_000;
 
 /** DEV-33: el paciente elige al inicio si tiene turno o no. */
@@ -48,10 +50,10 @@ type Paso =
   | { id: 'K07-ya-registrada'; admision: Admision }
   | { id: 'K09-error'; turno?: Turno; paciente?: string }
   | { id: 'K10-sin-conexion' }
-  | { id: 'K16-anio' } // #54: el número coincide con más de una persona
+  | { id: 'K16-cuil' } // #54: el número coincide con más de una persona: se pide el CUIL
   | { id: 'K17-varios-turnos'; turnos: Turno[]; registrados: Admision[] } // #54
   | { id: 'K18-otra-sucursal'; turno: Turno; sucursal: string } // #56
-  | { id: 'K19-muy-temprano'; turno: Turno; desde: Date } // #75
+  | { id: 'K19-temprano'; turno: Turno } // #75: llegó con mucha anticipación; puede registrarse y esperar
   | { id: 'K20-dia-cerrado' } // #69
   | { id: 'K21-deshecho'; numero: string }; // DEV-53: tocó "Me equivoqué"
 
@@ -71,10 +73,10 @@ const pasoDelStepper: Record<Paso['id'], PasoStepper | null> = {
   'K07-ya-registrada': 4,
   'K09-error': 4,
   'K10-sin-conexion': 4,
-  'K16-anio': 2,
+  'K16-cuil': 2,
   'K17-varios-turnos': 3,
   'K18-otra-sucursal': 4,
-  'K19-muy-temprano': 4,
+  'K19-temprano': 3,
   'K20-dia-cerrado': 4,
   'K21-deshecho': null,
 };
@@ -87,7 +89,7 @@ export function TotemPage() {
   const [modalidad, setModalidad] = useState<Modalidad>('con-turno');
   const [servicio, setServicio] = useState<string | null>(null);
   const [numero, setNumero] = useState('');
-  const [anio, setAnio] = useState('');
+  const [cuil, setCuil] = useState('');
   const centro = nombreSucursal(sucursalDelEquipo());
   const [errorCampo, setErrorCampo] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
@@ -96,7 +98,7 @@ export function TotemPage() {
   // Al volver al inicio se borran todos los datos: el próximo paciente no ve nada del anterior.
   const reiniciar = useCallback(() => {
     setNumero('');
-    setAnio('');
+    setCuil('');
     setErrorCampo(null);
     setBuscando(false);
     setServicio(null);
@@ -126,9 +128,12 @@ export function TotemPage() {
     };
   }, [paso.id, reiniciar]);
 
+  // Con turno no se elige servicio: el turno ya tiene la especialidad. Sin turno, sí.
   const elegirModalidad = (m: Modalidad) => {
     setModalidad(m);
-    setPaso({ id: 'K11-servicio' });
+    setServicio(null);
+    setErrorCampo(null);
+    setPaso(m === 'con-turno' ? { id: 'K02-ingreso' } : { id: 'K11-servicio' });
   };
 
   const elegirServicio = (s: string) => {
@@ -142,9 +147,9 @@ export function TotemPage() {
     setNumero((n) => (n.length < MAX_DIGITOS ? n + d : n));
   };
 
-  /** Busca el turno y decide la pantalla. Sin servicio, no controla que coincida (paciente que confirma su turno). */
-  const buscarConTurno = async (servicioElegido: string | undefined, anioNacimiento?: string) => {
-    mostrarResultado(await buscarTurno(numero, new Date(), servicioElegido, anioNacimiento));
+  /** Busca el turno del día y decide la pantalla. El servicio sale del turno. */
+  const buscarConTurno = async (cuilPaciente?: string) => {
+    mostrarResultado(await buscarTurno(numero, new Date(), undefined, cuilPaciente));
   };
 
   const mostrarResultado = (r: ResultadoBusqueda) => {
@@ -153,21 +158,21 @@ export function TotemPage() {
     else if (r.tipo === 'no-encontrado') setPaso({ id: 'K05-no-encontrado' });
     else if (r.tipo === 'tolerancia-vencida') setPaso({ id: 'K06-tolerancia' });
     else if (r.tipo === 'varias-personas') {
-      setAnio('');
-      setPaso({ id: 'K16-anio' });
+      setCuil('');
+      setPaso({ id: 'K16-cuil' });
     } else if (r.tipo === 'varios-turnos') setPaso({ id: 'K17-varios-turnos', turnos: r.turnos, registrados: r.registrados });
     else if (r.tipo === 'otra-sucursal') setPaso({ id: 'K18-otra-sucursal', turno: r.turno, sucursal: r.sucursal });
-    else if (r.tipo === 'muy-temprano') setPaso({ id: 'K19-muy-temprano', turno: r.turno, desde: r.desde });
+    else if (r.tipo === 'muy-temprano') setPaso({ id: 'K19-temprano', turno: r.turno });
     else if (r.tipo === 'dia-cerrado') setPaso({ id: 'K20-dia-cerrado' });
     else setPaso({ id: 'K07-ya-registrada', admision: r.admision });
   };
 
-  /** #54: el paciente confirmó su año de nacimiento. */
-  const continuarConAnio = async () => {
-    if (anio.length !== 4) return setErrorCampo('Ingrese los 4 números del año, por ejemplo 1980.');
+  /** #54: el número es de más de una persona; el paciente ingresó su CUIL. */
+  const continuarConCuil = async () => {
+    if (cuil.length !== CUIL_DIGITOS) return setErrorCampo('El CUIL tiene 11 números. Escríbalo sin guiones.');
     setBuscando(true);
     try {
-      await buscarConTurno(servicio ?? undefined, anio);
+      await buscarConTurno(cuil);
     } catch (e) {
       setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : { id: 'K05-no-encontrado' });
     } finally {
@@ -203,7 +208,7 @@ export function TotemPage() {
     setBuscando(true);
     try {
       if (modalidad === 'sin-turno') await buscarSinTurno();
-      else await buscarConTurno(servicio ?? undefined);
+      else await buscarConTurno();
     } catch (e) {
       setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : { id: 'K05-no-encontrado' });
     } finally {
@@ -216,7 +221,7 @@ export function TotemPage() {
     setModalidad('con-turno');
     setBuscando(true);
     try {
-      await buscarConTurno(undefined);
+      await buscarConTurno();
     } catch (e) {
       setPaso(e instanceof SinConexionError ? { id: 'K10-sin-conexion' } : { id: 'K05-no-encontrado' });
     } finally {
@@ -256,7 +261,7 @@ export function TotemPage() {
 
       <main className="totem__main">
         <div className="totem__container">
-          {etapa && <Stepper actual={etapa} />}
+          {etapa && <Stepper actual={etapa} conServicio={modalidad === 'sin-turno'} />}
           <div className="totem__content" aria-live="polite">
             {renderPaso()}
           </div>
@@ -336,7 +341,7 @@ export function TotemPage() {
               {modalidad === 'sin-turno' ? 'Ingrese su DNI' : 'Ingrese su número'}
             </h1>
             <p className="totem__subtitle">
-              {servicio} · Escríbalo sin puntos ni espacios.
+              {modalidad === 'sin-turno' ? `${servicio} · ` : ''}Escríbalo sin puntos ni espacios.
             </p>
             <label htmlFor="documento" className="totem__label">
               {etiqueta}
@@ -370,7 +375,7 @@ export function TotemPage() {
               <Button loading={buscando} onClick={continuar}>
                 {buscando ? (modalidad === 'sin-turno' ? 'Buscando sus datos…' : 'Buscando su turno…') : 'Continuar'}
               </Button>
-              <Button variant="secondary" disabled={buscando} onClick={() => setPaso({ id: 'K11-servicio' })}>
+              <Button variant="secondary" disabled={buscando} onClick={() => setPaso(modalidad === 'sin-turno' ? { id: 'K11-servicio' } : { id: 'K01-bienvenida' })}>
                 Volver
               </Button>
             </div>
@@ -491,7 +496,7 @@ export function TotemPage() {
             <ResultCard admision={paso.admision} />
             <p className="totem__lead totem__lead--dark">Diríjase a la sala de espera y mire la pantalla de llamados.</p>
             <AccionesRegistro key={paso.admision.turnoId} admision={paso.admision} recienRegistrada onDeshecho={() => setPaso({ id: 'K21-deshecho', numero: paso.admision.numero })} />
-            <Button onClick={reiniciar}>Listo, volver al inicio</Button>
+            <Button onClick={reiniciar}>Volver al inicio</Button>
           </Resultado>
         );
 
@@ -500,7 +505,7 @@ export function TotemPage() {
           <Resultado tituloRef={tituloRef} icon="undo" tono="success" titulo="Anulamos su registro">
             <p className="totem__lead totem__lead--dark">El número {paso.numero} quedó sin efecto. Puede registrarse de nuevo eligiendo bien su servicio y su turno.</p>
             <div className="totem__opciones">
-              <Button onClick={() => setPaso({ id: 'K11-servicio' })}>Registrarme de nuevo</Button>
+              <Button onClick={() => setPaso(modalidad === 'sin-turno' ? { id: 'K11-servicio' } : { id: 'K02-ingreso' })}>Registrarme de nuevo</Button>
               <Button variant="secondary" onClick={reiniciar}>
                 Volver al inicio
               </Button>
@@ -562,46 +567,46 @@ export function TotemPage() {
         );
       }
 
-      case 'K16-anio':
+      case 'K16-cuil':
         return (
           <section className="totem__form">
             <h1 ref={tituloRef} tabIndex={-1} className="totem__title">
               Confirme quién es
             </h1>
-            <p className="totem__subtitle">Ese número corresponde a más de una persona. Ingrese su año de nacimiento.</p>
-            <label htmlFor="anio" className="totem__label">
-              Año de nacimiento
+            <p className="totem__subtitle">Ese número corresponde a más de una persona. Ingrese su CUIL, sin guiones.</p>
+            <label htmlFor="cuil" className="totem__label">
+              CUIL
             </label>
             <input
-              id="anio"
+              id="cuil"
               className={`totem__input ${errorCampo ? 'totem__input--error' : ''}`}
-              value={anio}
-              placeholder="Por ejemplo, 1980"
+              value={cuil}
+              placeholder="Por ejemplo, 27201119990"
               inputMode="none"
               autoComplete="off"
               aria-invalid={!!errorCampo}
-              aria-describedby={errorCampo ? 'anio-error' : undefined}
+              aria-describedby={errorCampo ? 'cuil-error' : undefined}
               onChange={(e) => {
                 setErrorCampo(null);
-                setAnio(e.target.value.replace(/\D/g, '').slice(0, 4));
+                setCuil(e.target.value.replace(/\D/g, '').slice(0, CUIL_DIGITOS));
               }}
-              onKeyDown={(e) => e.key === 'Enter' && continuarConAnio()}
+              onKeyDown={(e) => e.key === 'Enter' && continuarConCuil()}
             />
             {errorCampo && (
-              <p id="anio-error" className="totem__field-error" role="alert">
+              <p id="cuil-error" className="totem__field-error" role="alert">
                 {errorCampo}
               </p>
             )}
             <Keypad
               onDigit={(d) => {
                 setErrorCampo(null);
-                setAnio((a) => (a.length < 4 ? a + d : a));
+                setCuil((c) => (c.length < CUIL_DIGITOS ? c + d : c));
               }}
-              onClear={() => setAnio('')}
-              onBackspace={() => setAnio((a) => a.slice(0, -1))}
+              onClear={() => setCuil('')}
+              onBackspace={() => setCuil((c) => c.slice(0, -1))}
             />
             <div className="totem__actions">
-              <Button loading={buscando} onClick={continuarConAnio}>
+              <Button loading={buscando} onClick={continuarConCuil}>
                 {buscando ? 'Buscando su turno…' : 'Continuar'}
               </Button>
               <Button variant="secondary" disabled={buscando} onClick={() => setPaso({ id: 'K02-ingreso' })}>
@@ -657,15 +662,23 @@ export function TotemPage() {
           </Resultado>
         );
 
-      case 'K19-muy-temprano':
+      case 'K19-temprano':
         return (
-          <Resultado tituloRef={tituloRef} icon="clock" tono="warning" titulo="Todavía es temprano">
-            <p className="totem__lead totem__lead--dark">
-              Su turno es a las <strong>{hora(paso.turno.horario)}</strong>. Puede registrar su llegada desde las <strong>{hora(paso.desde)}</strong>.
+          <section className="totem__form">
+            <h1 ref={tituloRef} tabIndex={-1} className="totem__title">
+              Llegó con anticipación
+            </h1>
+            <p className="totem__subtitle">
+              Su turno es a las <strong>{hora(paso.turno.horario)}</strong>. Puede registrar su llegada ahora y esperar en la sala: lo llamarán cerca de su horario.
             </p>
-            <p className="totem__small">Si necesita ayuda, acérquese a secretaría.</p>
-            <Button onClick={reiniciar}>Volver al inicio</Button>
-          </Resultado>
+            <TurnoDetalle turno={paso.turno} />
+            <div className="totem__actions">
+              <Button onClick={() => registrar(paso.turno)}>Registrar llegada y esperar</Button>
+              <Button variant="secondary" onClick={reiniciar}>
+                Volver al inicio
+              </Button>
+            </div>
+          </section>
         );
 
       case 'K20-dia-cerrado':

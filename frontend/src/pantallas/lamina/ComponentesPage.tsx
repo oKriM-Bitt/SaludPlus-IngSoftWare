@@ -20,7 +20,7 @@ const colores = [
   ['Éxito', '#166534'],
   ['Alerta', '#92400E'],
   ['Error', '#B91C1C'],
-  ['Información', '#1D4EDB'],
+  ['Información', '#1D4ED8'],
 ];
 
 const estados: EstadoTurno[] = ['en-espera', 'llamado', 'cancelado-tolerancia', 'ausente', 'contraturno'];

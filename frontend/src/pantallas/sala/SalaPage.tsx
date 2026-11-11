@@ -112,6 +112,21 @@ export function SalaPage() {
     if (ok) sonarLlamado(1);
   };
 
+  // En la TV, el primer toque o la primera tecla del control remoto en cualquier parte de la pantalla
+  // también habilita el sonido (el aviso queda tapado unos segundos mientras se muestra un llamado).
+  useEffect(() => {
+    if (!sonido || !bloqueado) return;
+    const desbloquear = () => {
+      habilitarAudio().then((ok) => setBloqueado(!ok));
+    };
+    window.addEventListener('pointerdown', desbloquear);
+    window.addEventListener('keydown', desbloquear);
+    return () => {
+      window.removeEventListener('pointerdown', desbloquear);
+      window.removeEventListener('keydown', desbloquear);
+    };
+  }, [sonido, bloqueado]);
+
   const sinConexion = carga === 'sin-conexion';
   const horaDatos = datos ? hora(datos.actualizadoEn) : null;
   const mostrarDatos = carga === 'ok' && datos;
@@ -221,7 +236,7 @@ export function SalaPage() {
         </aside>
 
         <section className="sala__historial" aria-label="Últimos llamados">
-          <h2>{sinConexion && horaDatos ? `Datos anteriores · hasta las ${horaDatos}` : 'Últimos 4 llamados'}</h2>
+          <h2>{sinConexion && horaDatos ? `Datos anteriores · hasta las ${horaDatos}` : 'Últimos llamados'}</h2>
           {datos && (carga === 'ok' || sinConexion) && (sinConexion ? [datos.actual, ...datos.anteriores].filter(Boolean).slice(0, 4) : datos.anteriores).length > 0 ? (
             <ul className="sala__lista">
               {(sinConexion ? [datos.actual!, ...datos.anteriores].filter(Boolean).slice(0, 4) : datos.anteriores).map((l) => (

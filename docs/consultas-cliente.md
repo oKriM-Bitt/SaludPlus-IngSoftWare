@@ -19,3 +19,18 @@ Preguntas que el equipo necesita que SaludPlus responda antes de programar. Cuan
 **Respuesta del cliente:** pendiente.
 
 **Próximo paso.** Con la respuesta, crear la historia de usuario (si corresponde) y cerrar #76.
+
+## ¿Qué formato tiene el número de afiliado?
+
+**Contexto.** El caso de estudio y el informe no definen cuántos caracteres tiene el número de afiliado. Hoy el tótem y la secretaría aceptan entre 7 y 11 dígitos, para que entren el DNI (7 u 8 dígitos), el número de afiliado (9 dígitos en los datos de prueba) y el CUIL (11 dígitos). En muchas obras sociales el número de afiliado tiene una parte del titular y dos dígitos más para cada integrante del grupo familiar; si SaludPlus lo usa así, el número identificaría a una sola persona y no haría falta pedir un dato más cuando el número coincide con varias.
+
+**Preguntas**
+
+1. ¿Cuántos caracteres tiene el número de afiliado de SaludPlus? ¿Es siempre igual de largo?
+2. ¿Tiene solo números, o también letras, guiones o barras?
+3. ¿Incluye un sufijo para cada integrante del grupo familiar (por ejemplo, /00 titular, /01 cónyuge)?
+4. ¿Tiene dígito verificador que el sistema pueda controlar?
+
+**Respuesta del cliente:** pendiente.
+
+**Próximo paso.** Con la respuesta, ajustar la validación del tótem y de la secretaría y los datos de prueba.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Logo } from '../../componentes/Logo';
 import { Icon } from '../../componentes/Icon';
-import { escucharCambios, hayConexion, obtenerSala, SinConexionError, textoDestino, type DatosSala, type Llamado } from '../../servicios/turnos';
+import { escucharCambios, hayConexion, obtenerSala, SinConexionError, textoDestino, type DatosSala, type Llamado, type PantallaLlamados } from '../../servicios/turnos';
 import { hora } from '../../utilidades/fechas';
 import { audioBloqueado, guardarSonido, habilitarAudio, sonarLlamado, sonidoActivado } from '../../servicios/sonido';
 import { anunciar, guardarVoz, vozActivada, vozDisponible } from '../../servicios/voz';
@@ -18,8 +18,13 @@ type Aviso = Pick<Llamado, 'numero' | 'lugar' | 'destino'> & { repetido: boolean
 
 type Carga = 'cargando' | 'ok' | 'error' | 'sin-conexion';
 
-/** Pantalla pública de la sala de espera (04 SALA DE ESPERA · T01–T05). Legible a 8 metros. */
-export function SalaPage() {
+/**
+ * Pantallas públicas de llamados, legibles a 8 metros (04 SALA DE ESPERA · T01–T05):
+ * - sala: la TV de la sala de espera, con los llamados a consultorio.
+ * - boxes: la TV de admisión, con los llamados a los boxes de la secretaría.
+ */
+export function SalaPage({ pantalla = 'sala' }: { pantalla?: PantallaLlamados }) {
+  const deBoxes = pantalla === 'boxes';
   const [carga, setCarga] = useState<Carga>('cargando');
   const [datos, setDatos] = useState<DatosSala | null>(null);
   const [ahora, setAhora] = useState(new Date());
@@ -40,7 +45,7 @@ export function SalaPage() {
   const actualizar = useCallback(async () => {
     if (!hayConexion()) return setCarga('sin-conexion');
     try {
-      const d = await obtenerSala();
+      const d = await obtenerSala(new Date(), pantalla);
       // #45: un llamado nuevo o repetido se destaca en grande y suena unos segundos.
       const clave = d.actual ? `${d.actual.lugar}|${d.actual.numero}|${d.actual.llamadoEn}` : '';
       if (ultimoLlamado.current !== null && d.actual && clave !== ultimoLlamado.current) {
@@ -65,7 +70,7 @@ export function SalaPage() {
     } catch (e) {
       setCarga(e instanceof SinConexionError ? 'sin-conexion' : 'error');
     }
-  }, []);
+  }, [pantalla]);
 
   useEffect(() => {
     actualizar();
@@ -137,7 +142,7 @@ export function SalaPage() {
         <span className="sala__logo">
           <Logo size={44} />
         </span>
-        <span className="sala__centro">{nombreSucursal(sucursalDelEquipo())} · Sala de espera</span>
+        <span className="sala__centro">{nombreSucursal(sucursalDelEquipo())} · {deBoxes ? 'Admisión · Boxes' : 'Sala de espera'}</span>
         <span className="sala__derecha">
           <button type="button" className="sala__sonido" aria-pressed={sonido} onClick={cambiarSonido}>
             <Icon name={sonido ? 'volume' : 'volume-off'} size={28} />
@@ -188,10 +193,39 @@ export function SalaPage() {
               <span className="sala__consultorio">{textoDestino(datos.actual)}</span>
             </>
           ) : (
-            <Mensaje carga={carga} horaDatos={horaDatos} />
+            <Mensaje carga={carga} horaDatos={horaDatos} deBoxes={deBoxes} />
           )}
         </section>
 
+        {deBoxes ? (
+          <aside className="sala__panel sala__esperas" aria-label="Boxes de admisión">
+            <h2>Boxes de admisión</h2>
+            {mostrarDatos ? (
+              <>
+                <dl>
+                  {datos.boxes.map((b) => (
+                    <div key={b.numero}>
+                      <dt>Box {b.numero}</dt>
+                      <dd className={b.atendiendo ? '' : 'sala__box-libre'}>{b.atendiendo ?? (b.abierto ? 'Disponible' : 'Cerrado')}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="sala__esperan" role="status">
+                  <Icon name="users" size={40} />
+                  <span>
+                    <b>{datos.esperanBox}</b>
+                    {datos.esperanBox === 1 ? 'persona espera ser llamada' : 'personas esperan ser llamadas'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="sala__esperas-vacio">
+                <Icon name={sinConexion ? 'wifi-off' : 'info'} size={44} />
+                <p>{sinConexion ? 'El estado de los boxes no está disponible sin conexión.' : 'El estado de los boxes se mostrará en un momento.'}</p>
+              </div>
+            )}
+          </aside>
+        ) : (
         <aside className="sala__panel sala__esperas" aria-label="Espera estimada">
           <h2>Espera estimada</h2>
           {mostrarDatos ? (
@@ -234,6 +268,7 @@ export function SalaPage() {
             </div>
           )}
         </aside>
+        )}
 
         <section className="sala__historial" aria-label="Últimos llamados">
           <h2>{sinConexion && horaDatos ? `Datos anteriores · hasta las ${horaDatos}` : 'Últimos llamados'}</h2>
@@ -279,7 +314,7 @@ export function SalaPage() {
   );
 }
 
-function Mensaje({ carga, horaDatos }: { carga: Carga; horaDatos: string | null }) {
+function Mensaje({ carga, horaDatos, deBoxes }: { carga: Carga; horaDatos: string | null; deBoxes: boolean }) {
   if (carga === 'cargando')
     return (
       <div className="sala__mensaje">
@@ -309,7 +344,7 @@ function Mensaje({ carga, horaDatos }: { carga: Carga; horaDatos: string | null 
     <div className="sala__mensaje">
       <Icon name="clock" size={96} />
       <h1>Todavía no hay llamados</h1>
-      <p>Cuando lo llamen, verá su número y consultorio aquí.</p>
+      <p>Cuando lo llamen, verá su número y {deBoxes ? 'el box al que tiene que pasar' : 'consultorio'} aquí.</p>
     </div>
   );
 }

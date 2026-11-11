@@ -11,7 +11,6 @@ import { CuentaPage } from './pantallas/cuenta/CuentaPage';
 import { CierrePage } from './pantallas/cierre/CierrePage';
 import { ReportesPage } from './pantallas/reportes/ReportesPage';
 import { AdministracionPage } from './pantallas/administracion/AdministracionPage';
-import { BoxPage } from './pantallas/box/BoxPage';
 
 export function App() {
   return (
@@ -20,6 +19,7 @@ export function App() {
         {/* Públicas: equipos del centro sin usuario */}
         <Route path="/totem" element={<TotemPage />} />
         <Route path="/sala" element={<SalaPage />} />
+        <Route path="/boxes" element={<SalaPage pantalla="boxes" />} />
         <Route path="/componentes" element={<ComponentesPage />} />
         <Route path="/ingresar" element={<IngresoPage />} />
 
@@ -27,7 +27,6 @@ export function App() {
         <Route path="/inicio" element={<RutaProtegida><InicioPage /></RutaProtegida>} />
         <Route path="/secretaria" element={<RutaProtegida><SecretariaPage /></RutaProtegida>} />
         <Route path="/profesional" element={<RutaProtegida><ProfesionalPage /></RutaProtegida>} />
-        <Route path="/box" element={<RutaProtegida><BoxPage /></RutaProtegida>} />
         <Route path="/secretaria/cierre" element={<RutaProtegida><CierrePage /></RutaProtegida>} />
         <Route path="/cuenta" element={<RutaProtegida><CuentaPage /></RutaProtegida>} />
         <Route path="/reportes" element={<RutaProtegida><ReportesPage /></RutaProtegida>} />

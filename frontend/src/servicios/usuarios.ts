@@ -95,7 +95,7 @@ export function destinosPorRol(u: Usuario, profesionales: { nombre: string; cons
   const totem: Destino = { ruta: equipo('/totem'), titulo: 'Tótem de autogestión', descripcion: 'Abrir en el tótem de esta sucursal.', icono: 'hand', nuevaPestana: true };
   const admision: Destino = { ruta: '/secretaria', titulo: 'Admisión y sala de espera', descripcion: 'Cola del centro, llegadas, derivaciones y avisos de profesionales.', icono: 'users' };
   const cierre: Destino = { ruta: '/secretaria/cierre', titulo: 'Cierre del día', descripcion: 'Pacientes pendientes y resumen de la jornada.', icono: 'calendar-check' };
-  const box: Destino = { ruta: '/box', titulo: 'Llamado a box', descripcion: 'Llamar a la ventanilla a los pacientes que esperan, como desde un consultorio.', icono: 'inbox' };
+  const boxes: Destino = { ruta: equipo('/boxes'), titulo: 'Pantalla de boxes', descripcion: 'Abrir en la TV de admisión: anuncia a qué box pasa cada paciente.', icono: 'inbox', nuevaPestana: true };
   const consultorio = (c: string, nombre: string): Destino => ({
     ruta: `/profesional?consultorio=${c}`,
     titulo: `Consultorio ${c}`,
@@ -103,18 +103,18 @@ export function destinosPorRol(u: Usuario, profesionales: { nombre: string; cons
     icono: 'user-check',
   });
 
-  if (u.rol === 'secretaria') return [admision, box, cierre, totem, sala];
+  if (u.rol === 'secretaria') return [admision, cierre, totem, sala, boxes];
   if (u.rol === 'profesional')
     return [{ ...consultorio(u.consultorio ?? '—', ''), titulo: 'Mi consultorio', descripcion: `Consultorio ${u.consultorio ?? '—'} · ${u.centro}. Vea sus pacientes en espera y llámelos.` }];
   return [
     admision,
-    box,
     ...profesionales.map((p) => consultorio(p.consultorio, p.nombre)),
     cierre,
     { ruta: '/reportes', titulo: 'Reportes', descripcion: 'Indicadores por sucursal, especialidad y período. Exportar a Excel.', icono: 'chart' },
     { ruta: '/administracion', titulo: 'Administración', descripcion: 'Usuarios, sucursales, consultorios, profesionales y parámetros.', icono: 'settings' },
     totem,
     sala,
+    boxes,
     { ruta: '/componentes', titulo: 'Lámina de componentes', descripcion: 'Sistema visual de SaludPlus.', icono: 'grid' },
   ];
 }
@@ -123,6 +123,6 @@ export function destinosPorRol(u: Usuario, profesionales: { nombre: string; cons
 export function puedeAcceder(u: Pick<Usuario, 'rol'>, ruta: string): boolean {
   if (ruta === '/inicio' || ruta === '/cuenta') return true;
   if (u.rol === 'direccion') return true;
-  if (u.rol === 'secretaria') return ruta === '/secretaria' || ruta === '/secretaria/cierre' || ruta === '/box';
+  if (u.rol === 'secretaria') return ruta === '/secretaria' || ruta === '/secretaria/cierre';
   return ruta === '/profesional';
 }

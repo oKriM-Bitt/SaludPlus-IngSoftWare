@@ -13,7 +13,7 @@ const CLAVE_EQUIPO = 'saludplus.equipo.sucursal';
 function esPantallaDeEquipo() {
   if (typeof window === 'undefined') return false;
   const ruta = window.location.pathname;
-  return ruta.startsWith('/totem') || ruta.startsWith('/sala');
+  return ruta.startsWith('/totem') || ruta.startsWith('/sala') || ruta.startsWith('/boxes');
 }
 
 /** Sucursal configurada en este equipo (tótem o TV de sala). */

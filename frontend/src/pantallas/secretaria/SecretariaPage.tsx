@@ -441,7 +441,7 @@ export function SecretariaPage() {
     operarBox(
       'llamar',
       () => llamarAlBox(miBox, a?.turnoId),
-      (r) => ({ tono: 'success', titulo: r ? `${r.numero} llamado al box ${miBox}` : 'Llamado', texto: 'La sala muestra el número y el box.' }),
+      (r) => ({ tono: 'success', titulo: r ? `${r.numero} llamado al box ${miBox}` : 'Llamado', texto: 'La pantalla de boxes muestra el número y el box.' }),
     );
 
   return (
@@ -666,11 +666,8 @@ export function SecretariaPage() {
                 </select>
               </div>
             </div>
-            <Link to="/box" className="sec__link sec__box-pantalla">
-              <Icon name="megaphone" size={20} /> Abrir la pantalla de llamado a box
-            </Link>
             {!miBox ? (
-              <p className="sec__box-texto">Elija su box para llamar pacientes. La sala los anuncia igual que a los consultorios.</p>
+              <p className="sec__box-texto">Elija su box para llamar pacientes. La pantalla de boxes los anuncia con sonido y voz.</p>
             ) : enMiBox ? (
               <div className="sec__box-atencion">
                 <span className="sec__box-numero">{enMiBox.numero}</span>

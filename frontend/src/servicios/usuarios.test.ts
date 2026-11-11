@@ -41,8 +41,6 @@ describe('permisos por rol (#48, #59)', () => {
   it('cada rol abre solo sus pantallas', () => {
     expect(puedeAcceder(sesion('secretaria'), '/secretaria')).toBe(true);
     expect(puedeAcceder(sesion('secretaria'), '/secretaria/cierre')).toBe(true);
-    expect(puedeAcceder(sesion('secretaria'), '/box')).toBe(true);
-    expect(puedeAcceder(sesion('profesional', '4'), '/box')).toBe(false);
     expect(puedeAcceder(sesion('secretaria'), '/profesional')).toBe(false);
     expect(puedeAcceder(sesion('secretaria'), '/administracion')).toBe(false);
     expect(puedeAcceder(sesion('profesional', '4'), '/profesional')).toBe(true);
@@ -57,9 +55,10 @@ describe('permisos por rol (#48, #59)', () => {
     const destinos = destinosPorRol(sesion('profesional', '4'));
     expect(destinos.map((d) => d.ruta)).toEqual(['/profesional?consultorio=4']);
   });
-  it('el tótem y la sala se abren configurados para la sucursal de la secretaria', () => {
+  it('el tótem, la sala y la pantalla de boxes se abren configurados para la sucursal de la secretaria', () => {
     const rutas = destinosPorRol(sesion('secretaria')).map((d) => d.ruta);
     expect(rutas).toContain('/totem?sucursal=villa-norte');
     expect(rutas).toContain('/sala?sucursal=villa-norte');
+    expect(rutas).toContain('/boxes?sucursal=villa-norte');
   });
 });

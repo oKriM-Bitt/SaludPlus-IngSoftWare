@@ -666,6 +666,9 @@ export function SecretariaPage() {
                 </select>
               </div>
             </div>
+            <Link to="/box" className="sec__link sec__box-pantalla">
+              <Icon name="megaphone" size={20} /> Abrir la pantalla de llamado a box
+            </Link>
             {!miBox ? (
               <p className="sec__box-texto">Elija su box para llamar pacientes. La sala los anuncia igual que a los consultorios.</p>
             ) : enMiBox ? (

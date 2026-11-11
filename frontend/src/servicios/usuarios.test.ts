@@ -41,6 +41,8 @@ describe('permisos por rol (#48, #59)', () => {
   it('cada rol abre solo sus pantallas', () => {
     expect(puedeAcceder(sesion('secretaria'), '/secretaria')).toBe(true);
     expect(puedeAcceder(sesion('secretaria'), '/secretaria/cierre')).toBe(true);
+    expect(puedeAcceder(sesion('secretaria'), '/box')).toBe(true);
+    expect(puedeAcceder(sesion('profesional', '4'), '/box')).toBe(false);
     expect(puedeAcceder(sesion('secretaria'), '/profesional')).toBe(false);
     expect(puedeAcceder(sesion('secretaria'), '/administracion')).toBe(false);
     expect(puedeAcceder(sesion('profesional', '4'), '/profesional')).toBe(true);

@@ -865,8 +865,16 @@ export type DatosSala = {
   demoras: { especialidad: string; minutos: number }[];
   avisos: { consultorio: string; texto: string }[]; // #63 y DEV-58: profesional ausente, demorado o en pausa
   generales: { id: string; texto: string }[]; // DEV-55: avisos de la secretaría
+  boxes: EstadoBox[]; // pantalla de boxes: qué número atiende cada box
+  esperanBox: number; // pantalla de boxes: personas que todavía esperan pasar por admisión
   actualizadoEn: Date;
 };
+
+/** Un box en la pantalla de boxes: el número que atiende, si atiende alguien y si hay una secretaria. */
+export type EstadoBox = { numero: string; atendiendo: string | null; abierto: boolean };
+
+/** Qué muestra cada TV: la sala, los llamados a consultorio; la pantalla de boxes, los llamados a box. */
+export type PantallaLlamados = 'sala' | 'boxes';
 
 /** "Consultorio 4" o "Box 1". */
 export const textoDestino = (l: Pick<Llamado, 'lugar' | 'destino'>) => `${l.lugar === 'box' ? 'Box' : 'Consultorio'} ${l.destino}`;
@@ -881,14 +889,19 @@ function llamadosDe(admisiones: Admision[]): Llamado[] {
   return lista.sort((x, y) => y.llamadoEn.localeCompare(x.llamadoEn));
 }
 
-/** La sala muestra solo número y consultorio: nunca nombres ni datos de salud. */
-export async function obtenerSala(ahora = new Date()): Promise<DatosSala> {
+/**
+ * Datos de las TV de la sucursal. Muestran solo número y destino: nunca nombres ni datos de salud.
+ * La sala anuncia los llamados a consultorio y la pantalla de boxes, los llamados a box.
+ */
+export async function obtenerSala(ahora = new Date(), pantalla: PantallaLlamados = 'sala'): Promise<DatosSala> {
   verificarConexion();
   await esperar(600);
   verificarServicio();
   refrescarProfesionales();
   const todas = Object.values(admisionesVigentes());
-  const llamados = llamadosDe(todas);
+  const llamados = llamadosDe(todas).filter((l) => l.lugar === (pantalla === 'boxes' ? 'box' : 'consultorio'));
+  const ocupacion = ocupacionBoxes();
+  const boxes = boxesDeSucursal().map((b) => ({ numero: b.numero, atendiendo: pacienteEnBox(b.numero)?.numero ?? null, abierto: !!ocupacion[b.numero] }));
   const repetidas = (esp: string) => PROFESIONALES.filter((p) => p.especialidad === esp).length > 1;
   const etiqueta = (p: Profesional) => (repetidas(p.especialidad) ? `${p.especialidad} · consultorio ${p.consultorio}` : p.especialidad);
   const estados = estadosProfesionales();
@@ -920,7 +933,7 @@ export async function obtenerSala(ahora = new Date()): Promise<DatosSala> {
     };
   });
   const generales = avisosVigentes(sucursalActiva(), ahora).map((a) => ({ id: a.id, texto: a.texto }));
-  return { actual: llamados[0] ?? null, anteriores: llamados.slice(1, 5), esperas, demoras, avisos, generales, actualizadoEn: new Date() };
+  return { actual: llamados[0] ?? null, anteriores: llamados.slice(1, 5), esperas, demoras, avisos, generales, boxes, esperanBox: colaDeBox().length, actualizadoEn: new Date() };
 }
 
 // ---------- Vista del profesional ----------

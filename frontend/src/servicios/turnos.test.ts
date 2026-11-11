@@ -73,12 +73,19 @@ describe('llamado a los boxes de admisión (DEV-44)', () => {
     await ya(T.elegirBox('mcastro', '2'));
     expect(T.ocupacionBoxes()).toEqual({ '1': 'jbenitez', '2': 'mcastro' });
   });
-  it('la sala muestra número y box, y al terminar queda en espera del profesional', async () => {
+  it('la pantalla de boxes muestra número y box, y al terminar queda en espera del profesional', async () => {
     const proximo = T.colaDeBox()[0];
+    const esperaban = T.colaDeBox().length;
     const llamado = await ya(T.llamarAlBox('1', proximo.turnoId));
+    const boxes = await ya(T.obtenerSala(new Date(), 'boxes'));
+    expect(boxes.actual).toMatchObject({ numero: llamado.numero, lugar: 'box', destino: '1' });
+    expect(T.textoDestino(boxes.actual!)).toBe('Box 1');
+    expect(boxes.boxes.find((b) => b.numero === '1')).toMatchObject({ atendiendo: llamado.numero });
+    expect(boxes.esperanBox).toBe(esperaban - 1);
+    expect([boxes.actual, ...boxes.anteriores].every((l) => l!.lugar === 'box')).toBe(true);
+    // La sala de espera sigue mostrando solo los llamados a consultorio.
     const sala = await ya(T.obtenerSala());
-    expect(sala.actual).toMatchObject({ numero: llamado.numero, lugar: 'box', destino: '1' });
-    expect(T.textoDestino(sala.actual!)).toBe('Box 1');
+    expect([sala.actual, ...sala.anteriores].filter(Boolean).every((l) => l!.lugar === 'consultorio')).toBe(true);
     // Mientras está en el box, el profesional no lo puede llamar.
     expect((await ya(T.obtenerCola(llamado.consultorio))).enEspera.some((a) => a.turnoId === llamado.turnoId)).toBe(false);
     await ya(T.finalizarBox(llamado));

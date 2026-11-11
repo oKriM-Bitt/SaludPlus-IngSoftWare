@@ -5,7 +5,8 @@ React + TypeScript + Vite. Incluye, según el diseño de Figma:
 - **Tótem de autogestión** `/totem` (K01–K15), responsive desde celular hasta la pantalla vertical de 1080×1920.
 - **Vista del profesional** `/profesional` (P01–P06), pensada para tablet 1024×768 y responsive.
 - **Panel de secretaría** `/secretaria` (S01–S06), pensado para escritorio 1440×900; en celular la tabla pasa a tarjetas.
-- **Pantalla de sala de espera** `/sala` (T01–T05), para TV 1920×1080 y legible a 8 metros; también se adapta a pantallas chicas.
+- **Pantalla de sala de espera** `/sala` (T01–T05), para TV 1920×1080 y legible a 8 metros; también se adapta a pantallas chicas. Anuncia los llamados a consultorio.
+- **Pantalla de boxes** `/boxes`, la TV de admisión: anuncia a qué box pasa cada paciente, muestra qué número atiende cada box y cuántas personas esperan. Mismo diseño, sonido y voz que la sala.
 - **Lámina de componentes** `/componentes`: paleta, tipografía, botones, campos, estados, alertas e íconos (manual de marca B.4).
 - **Inicio de sesión** `/ingresar` y **menú principal** `/inicio` para el personal (correcciones del 26/10: #47 y #48).
 - **Cierre del día** `/secretaria/cierre` (#69), **Reportes** `/reportes` (#78), **Administración** `/administracion` (#60, #77) y **Cambiar contraseña** `/cuenta` (#79).
@@ -23,7 +24,7 @@ npm install
 npm run dev
 ```
 
-Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (`/totem`) y la sala (`/sala`) se abren sin usuario.
+Abrir http://localhost:5173: pide usuario y contraseña (ver abajo). El tótem (`/totem`), la sala (`/sala`) y la pantalla de boxes (`/boxes`) se abren sin usuario.
 
 - `npm run build`: compila para producción (carpeta `dist/`).
 - `npm test`: corre las pruebas (tolerancia y llegada anticipada, tiempos de espera, usuarios, contraseñas y permisos, configuración y agenda, resúmenes y reportes, llamado fuera de orden y atajos de teclado, y las reglas de S3 y S4: prioridad, boxes, pausa, consultorio del día, derivación, turnos del día, deshacer, buscador, avisos, ticket y voz).
@@ -145,7 +146,7 @@ La cola se guarda en el navegador (localStorage) para que el tótem y el profesi
 
 | ID | Qué se hizo | Dónde probarlo |
 |---|---|---|
-| DEV-44 | **Boxes de admisión:** cada secretaria elige su box; llama al siguiente o a uno de la cola (Acciones → "Llamar a mi box"); vuelve a llamar, marca ausente y finaliza. La sala anuncia "Box 1" igual que un consultorio. Al terminar, el paciente queda en espera de su profesional. | `/secretaria` → "Box de admisión" |
+| DEV-44 | **Boxes de admisión:** cada secretaria elige su box; llama al siguiente o a uno de la cola (Acciones → "Llamar a mi box"); vuelve a llamar, marca ausente y finaliza, todo desde su pantalla. La **pantalla de boxes** anuncia "A021 · Box 1" con sonido y voz; la sala de espera muestra solo los llamados a consultorio. Al terminar, el paciente queda en espera de su profesional. | `/secretaria` → "Box de admisión", con `/boxes?sucursal=villa-norte` abierta en otra pestaña |
 | DEV-48 | **Ticket a pedido:** botón "Imprimir ticket" al registrar la llegada. Muestra número, consultorio, hora de llegada y espera; sin nombre ni datos de salud. Una sola vez por llegada. `?impresora=sin-papel` o `?impresora=error` simulan fallas: el tótem avisa y el número queda en pantalla. | `/totem` |
 | DEV-49 | **Prioridad:** Acciones → "Dar prioridad" con un motivo de los que configura dirección. Pasa adelante en la cola del profesional, se ve con ícono y texto, y queda en la auditoría (quién, cuándo, por qué). La sala no muestra el motivo. | `/secretaria`, `/profesional` |
 | DEV-53 | **Volver atrás y "Me equivoqué":** cada paso del tótem tiene "Volver". Después de registrar, el paciente tiene 20 segundos para deshacer; el número queda libre (no hay huecos ni duplicados). Pasado ese tiempo, el tótem indica ir a secretaría. | `/totem` |

@@ -459,3 +459,60 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+
+/* TV horizontal: todo entra en la pantalla. En una TV nadie puede desplazar la página,
+   así que la sala ocupa exactamente el alto visible y los paneles se ajustan a ese alto. */
+@media (min-width: 901px) and (orientation: landscape) {
+  .sala {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .sala__main {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .sala__llamado {
+    min-height: 0;
+  }
+
+  .sala__esperas {
+    min-height: 0;
+    overflow: hidden;
+    gap: clamp(10px, 1.04vw, 20px);
+  }
+
+  .sala__esperas dl {
+    gap: clamp(8px, 1.04vw, 20px);
+  }
+
+  .sala__esperas dt {
+    font-size: clamp(15px, 1.56vw, 30px);
+    line-height: 1.2;
+  }
+
+  .sala__esperas dd {
+    font-size: clamp(17px, 1.82vw, 35px);
+  }
+
+  .sala__demora {
+    gap: var(--space-2);
+    padding: clamp(12px, 1.15vw, 22px);
+    font-size: clamp(14px, 1.46vw, 28px);
+    line-height: 1.25;
+  }
+
+  .sala__demora strong {
+    font-size: clamp(16px, 1.67vw, 32px);
+  }
+
+  .sala__historial {
+    gap: clamp(8px, 0.83vw, 16px);
+  }
+
+  .sala__lista li {
+    padding: clamp(10px, 1.04vw, 20px) clamp(14px, 1.46vw, 28px);
+  }
+}

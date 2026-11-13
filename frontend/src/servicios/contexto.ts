@@ -16,7 +16,7 @@ function esPantallaDeEquipo() {
   return ruta.startsWith('/totem') || ruta.startsWith('/sala') || ruta.startsWith('/boxes');
 }
 
-/** Sucursal configurada en este equipo (tótem o TV de sala). */
+/** Sucursal configurada en este equipo (tótem, TV de sala o TV de boxes). */
 export function sucursalDelEquipo(): string {
   const pedida = parametroURL('sucursal');
   if (pedida && sucursalPorId(pedida)?.activa) {

@@ -85,7 +85,7 @@ export type Destino = {
 
 /**
  * Opciones del menú según lo que necesita cada rol para su trabajo (#48, #59):
- * - Secretaría: la cola de admisión, el cierre del día y poner en marcha el tótem y la sala de su sucursal.
+ * - Secretaría: la cola de admisión, el cierre del día y poner en marcha el tótem, la sala y la pantalla de boxes de su sucursal.
  * - Profesional: solo su consultorio. La sala es un equipo de la sucursal, no una herramienta del médico.
  * - Dirección: todo, más reportes y administración.
  */

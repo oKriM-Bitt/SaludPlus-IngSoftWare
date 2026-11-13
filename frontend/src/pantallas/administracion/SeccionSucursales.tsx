@@ -7,7 +7,7 @@ import { cambiar, slug } from './cambios';
 import { Estado, useConfiguracion } from './comun';
 import { useConfirmar } from '../../componentes/Confirmar';
 
-/** #56 y #60: sucursales, con los enlaces para configurar el tótem y la sala de cada una. */
+/** #56 y #60: sucursales, con los enlaces para configurar el tótem, la sala y la pantalla de boxes de cada una. */
 export function SeccionSucursales() {
   const config = useConfiguracion();
   const [editando, setEditando] = useState<Sucursal | 'nueva' | null>(null);
@@ -64,6 +64,9 @@ export function SeccionSucursales() {
                   <a className="link-boton" href={`/sala?sucursal=${s.id}`} target="_blank" rel="noreferrer">
                     <Icon name="monitor" size={18} /> Abrir sala
                   </a>
+                  <a className="link-boton" href={`/boxes?sucursal=${s.id}`} target="_blank" rel="noreferrer">
+                    <Icon name="inbox" size={18} /> Abrir pantalla de boxes
+                  </a>
                 </>
               )}
               <button type="button" className="link-boton" onClick={() => setEditando(s)}>
@@ -77,7 +80,7 @@ export function SeccionSucursales() {
         ))}
       </ul>
       <p className="tarjeta__ayuda">
-        Cada tótem y cada TV de sala se configuran una sola vez abriéndolos con el enlace de su sucursal: el equipo la recuerda.
+        Cada tótem, cada TV de sala y cada TV de boxes se configuran una sola vez abriéndolos con el enlace de su sucursal: el equipo la recuerda.
       </p>
       {dialogo}
     </section>
